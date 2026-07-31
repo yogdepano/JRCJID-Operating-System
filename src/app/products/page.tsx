@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Package, Plus, Search, Filter, AlertTriangle, ArrowLeft, Wand2 } from "lucide-react";
+import { Package, Plus, Search, Filter, AlertTriangle, ArrowLeft, Wand2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -17,20 +17,34 @@ interface Product {
   selling_price: number;
 }
 
+interface NewProductItem {
+  id: string;
+  name: string;
+  sku: string;
+  category: Product["category"];
+  uom: string;
+  unit_cost: number;
+  selling_price: number;
+}
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Form State
-  const [sku, setSku] = useState("");
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState<Product["category"]>("raw_material");
-  const [uom, setUom] = useState("Drum");
-  const [minReorder, setMinReorder] = useState(10);
-  const [unitCost, setUnitCost] = useState(17000);
-  const [sellingPrice, setSellingPrice] = useState(18500);
+  // BATCH MULTI-PRODUCT CREATION STATE
+  const [newItems, setNewItems] = useState<NewProductItem[]>([
+    {
+      id: "item-1",
+      name: "Isopropyl Alcohol 99%",
+      sku: "RM-IA9-99",
+      category: "raw_material",
+      uom: "Drum",
+      unit_cost: 17000,
+      selling_price: 18500,
+    },
+  ]);
 
   const fetchProducts = async () => {
     try {
@@ -61,7 +75,6 @@ export default function ProductsPage() {
 
     const prefix = categoryPrefixMap[cat] || "PRD";
 
-    // Extract initials or key words from name
     const words = productName.trim().split(/\s+/).filter(Boolean);
     let nameCode = "";
     if (words.length === 1) {
@@ -70,62 +83,92 @@ export default function ProductsPage() {
       nameCode = words.map((w) => w[0]).join("").toUpperCase().substring(0, 4);
     }
 
-    // Extract numbers if present (e.g. 99% -> 99)
     const numbersMatch = productName.match(/\d+/);
     const numPart = numbersMatch ? `-${numbersMatch[0]}` : `-${Math.floor(100 + Math.random() * 900)}`;
 
     return `${prefix}-${nameCode}${numPart}`;
   };
 
-  // Auto-update SKU whenever Name or Category changes (if SKU wasn't manually edited)
-  const handleNameChange = (val: string) => {
-    setName(val);
-    setSku(generateSkuFromName(val, category));
-  };
-
-  const handleCategoryChange = (cat: Product["category"]) => {
-    setCategory(cat);
-    if (name) {
-      setSku(generateSkuFromName(name, cat));
-    }
-  };
-
-  const handleAddProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const finalSku = sku || generateSkuFromName(name, category) || `SKU-${Date.now()}`;
-
-    const newProd: Product = {
-      id: `p-${Date.now()}`,
-      sku: finalSku,
-      name,
-      category,
-      uom,
-      min_reorder_level: Number(minReorder),
-      current_stock: 0,
-      unit_cost: Number(unitCost),
-      selling_price: Number(sellingPrice),
+  // MULTI-ITEM FORM HANDLERS
+  const handleAddMoreProductItem = () => {
+    const newItem: NewProductItem = {
+      id: `item-${Date.now()}`,
+      name: "",
+      sku: "",
+      category: "raw_material",
+      uom: "Drum",
+      unit_cost: 0,
+      selling_price: 0,
     };
+    setNewItems([...newItems, newItem]);
+  };
 
-    setProducts([newProd, ...products]);
+  const handleRemoveProductItem = (id: string) => {
+    if (newItems.length === 1) return;
+    setNewItems(newItems.filter((item) => item.id !== id));
+  };
+
+  const handleUpdateItem = (id: string, field: keyof NewProductItem, value: any) => {
+    setNewItems(
+      newItems.map((item) => {
+        if (item.id === id) {
+          const updated = { ...item, [field]: value };
+          if (field === "name" || field === "category") {
+            updated.sku = generateSkuFromName(updated.name, updated.category);
+          }
+          return updated;
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleSaveAllProducts = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const createdProducts: Product[] = newItems.map((item) => ({
+      id: `p-${Date.now()}-${Math.random()}`,
+      sku: item.sku || generateSkuFromName(item.name, item.category) || `SKU-${Date.now()}`,
+      name: item.name,
+      category: item.category,
+      uom: item.uom || "PCS",
+      min_reorder_level: 10,
+      current_stock: 0,
+      unit_cost: Number(item.unit_cost) || 0,
+      selling_price: Number(item.selling_price) || 0,
+    }));
+
+    setProducts([...createdProducts, ...products]);
     setIsModalOpen(false);
 
     try {
       const supabase = createClient();
-      await supabase.from("products").insert({
-        sku: finalSku,
-        name,
-        category,
-        uom,
-        min_reorder_level: Number(minReorder),
-        unit_cost: Number(unitCost),
-        selling_price: Number(sellingPrice),
-      });
+      for (const p of createdProducts) {
+        await supabase.from("products").insert({
+          sku: p.sku,
+          name: p.name,
+          category: p.category,
+          uom: p.uom,
+          min_reorder_level: p.min_reorder_level,
+          unit_cost: p.unit_cost,
+          selling_price: p.selling_price,
+        });
+      }
     } catch (err) {
-      console.error("Error saving product to Supabase:", err);
+      console.error("Error saving products to Supabase:", err);
     }
 
-    setSku("");
-    setName("");
+    setNewItems([
+      {
+        id: "item-1",
+        name: "",
+        sku: "",
+        category: "raw_material",
+        uom: "Drum",
+        unit_cost: 0,
+        selling_price: 0,
+      },
+    ]);
   };
 
   const filteredProducts = products.filter((p) => {
@@ -147,7 +190,7 @@ export default function ProductsPage() {
               <Package className="w-6 h-6 text-amber-400" />
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">Product Catalog Master</h1>
             </div>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium">Manage SKUs, auto-generate codes, unit costs, and selling prices</p>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">Batch register SKUs, auto-generate codes, unit costs, and selling prices</p>
           </div>
         </div>
 
@@ -156,7 +199,7 @@ export default function ProductsPage() {
           className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-yellow-500/20 active:scale-95 transition-all"
         >
           <Plus className="w-5 h-5" />
-          <span>Add Product SKU</span>
+          <span>Add Products to Catalog</span>
         </button>
       </div>
 
@@ -247,120 +290,161 @@ export default function ProductsPage() {
         </table>
       </div>
 
-      {/* MODAL WITH AUTOMATIC SKU GENERATOR */}
+      {/* BATCH MULTI-PRODUCT CREATION MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0b132b] border border-[#1c2541] rounded-2xl w-full max-w-lg p-5 sm:p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#0b132b] border border-[#1c2541] rounded-2xl w-full max-w-3xl p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
             <div className="flex items-center justify-between border-b border-[#1c2541] pb-3">
-              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
                 <Package className="w-5 h-5 text-amber-400" />
-                <span>Add Product to Catalog</span>
+                <span>Add Products to Catalog (Batch Multi-Item & Auto SKU)</span>
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white text-lg">✕</button>
             </div>
 
-            <form onSubmit={handleAddProduct} className="space-y-3.5 text-xs sm:text-sm">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-slate-200 font-bold block">SKU Code</label>
-                    <button
-                      type="button"
-                      onClick={() => setSku(generateSkuFromName(name, category))}
-                      className="text-[10px] text-amber-400 hover:underline font-bold flex items-center gap-1"
-                    >
-                      <Wand2 className="w-3 h-3" /> Auto
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    placeholder="RM-CHEM-009"
-                    value={sku}
-                    onChange={(e) => setSku(e.target.value)}
-                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs font-mono font-bold text-amber-400 focus:border-amber-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-slate-200 font-bold block mb-1">Category</label>
-                  <select
-                    value={category}
-                    onChange={(e) => handleCategoryChange(e.target.value as Product["category"])}
-                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs text-slate-100 font-semibold"
-                  >
-                    <option value="raw_material">Raw Material</option>
-                    <option value="finished_chemical">Finished Chemical</option>
-                    <option value="packaging">Packaging</option>
-                    <option value="pest_control_supply">Pest Control Supply</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-slate-200 font-bold block mb-1">Product Description / Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Isopropyl Alcohol 99%"
-                  value={name}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold focus:border-amber-400"
-                />
-                <span className="text-[10px] text-amber-400 font-medium block mt-1">
-                  💡 Type name to automatically generate standardized SKU code (e.g. {generateSkuFromName(name || "Isopropyl Alcohol 99%", category)})
+            <form onSubmit={handleSaveAllProducts} className="space-y-4 text-xs sm:text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold text-amber-400 uppercase tracking-wider">
+                  Product Items ({newItems.length})
                 </span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="text-slate-200 font-bold block mb-1">UOM</label>
-                  <input
-                    type="text"
-                    required
-                    value={uom}
-                    onChange={(e) => setUom(e.target.value)}
-                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs font-mono text-slate-100"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-200 font-bold block mb-1">Unit Cost (₱)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={unitCost}
-                    onChange={(e) => setUnitCost(Number(e.target.value))}
-                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs font-mono font-bold text-slate-100"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-200 font-bold block mb-1">Selling Price (₱)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={sellingPrice}
-                    onChange={(e) => setSellingPrice(Number(e.target.value))}
-                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs font-mono font-bold text-amber-400"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-[#131c35] text-slate-300 hover:text-white text-xs font-bold"
+                  onClick={handleAddMoreProductItem}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-400/10 border border-amber-400/30 text-amber-400 hover:bg-amber-400/20 text-xs font-bold transition-all"
                 >
-                  Cancel
+                  <Plus className="w-4 h-4" />
+                  <span>+ Add More Items</span>
                 </button>
+              </div>
+
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+                {newItems.map((item, index) => (
+                  <div key={item.id} className="p-4 rounded-xl bg-[#131c35] border border-[#1c2541] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-400">Product #{index + 1}</span>
+                      {newItems.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveProductItem(item.id)}
+                          className="text-rose-400 hover:text-rose-300 p-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-slate-200 font-bold block">SKU Code</label>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateItem(item.id, "sku", generateSkuFromName(item.name, item.category))}
+                            className="text-[10px] text-amber-400 hover:underline font-bold flex items-center gap-1"
+                          >
+                            <Wand2 className="w-3 h-3" /> Auto
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          required
+                          placeholder="RM-IA9-99"
+                          value={item.sku}
+                          onChange={(e) => handleUpdateItem(item.id, "sku", e.target.value)}
+                          className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs font-mono font-bold text-amber-400 focus:border-amber-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-200 font-bold block mb-1">Category</label>
+                        <select
+                          value={item.category}
+                          onChange={(e) => handleUpdateItem(item.id, "category", e.target.value as Product["category"])}
+                          className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs text-slate-100 font-semibold"
+                        >
+                          <option value="raw_material">Raw Material</option>
+                          <option value="finished_chemical">Finished Chemical</option>
+                          <option value="packaging">Packaging</option>
+                          <option value="pest_control_supply">Pest Control Supply</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-slate-200 font-bold block mb-1">Product Description / Name</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Isopropyl Alcohol 99%"
+                        value={item.name}
+                        onChange={(e) => handleUpdateItem(item.id, "name", e.target.value)}
+                        className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-slate-200 font-bold block mb-1">UOM</label>
+                        <input
+                          type="text"
+                          required
+                          value={item.uom}
+                          onChange={(e) => handleUpdateItem(item.id, "uom", e.target.value)}
+                          className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs font-mono text-slate-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-slate-200 font-bold block mb-1">Unit Cost (₱)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          required
+                          value={item.unit_cost}
+                          onChange={(e) => handleUpdateItem(item.id, "unit_cost", Number(e.target.value))}
+                          className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs font-mono font-bold text-slate-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-slate-200 font-bold block mb-1">Selling Price (₱)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          required
+                          value={item.selling_price}
+                          onChange={(e) => handleUpdateItem(item.id, "selling_price", Number(e.target.value))}
+                          className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs font-mono font-bold text-amber-400"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2 flex justify-between items-center">
                 <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-extrabold shadow-lg shadow-yellow-500/20"
+                  type="button"
+                  onClick={handleAddMoreProductItem}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#131c35] border border-amber-400/30 text-amber-400 hover:bg-[#1c2541] text-xs font-bold"
                 >
-                  Save Product
+                  <Plus className="w-4 h-4" />
+                  <span>+ Add More Items</span>
                 </button>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl bg-[#131c35] text-slate-300 hover:text-white text-xs font-bold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-extrabold shadow-lg shadow-yellow-500/20"
+                  >
+                    Save All Products to Catalog
+                  </button>
+                </div>
               </div>
             </form>
           </div>
