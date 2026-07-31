@@ -203,14 +203,12 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 );
 
 -- 11. AUTOMATIC PROFILE CREATION TRIGGER FOR SUPABASE AUTH
--- Automatically grants super_admin role to the FIRST user who registers!
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
     user_count INTEGER;
     admin_role_id UUID;
 BEGIN
-    -- Insert profile
     INSERT INTO public.profiles (id, email, first_name, last_name, department)
     VALUES (
         NEW.id,
@@ -225,10 +223,8 @@ BEGIN
         last_name = EXCLUDED.last_name,
         department = EXCLUDED.department;
 
-    -- Check total existing profiles
     SELECT COUNT(*) INTO user_count FROM public.profiles;
 
-    -- If this is the FIRST registered user in the database, automatically assign super_admin role!
     IF user_count = 1 THEN
         SELECT id INTO admin_role_id FROM public.roles WHERE code = 'super_admin';
         IF admin_role_id IS NOT NULL THEN
@@ -250,6 +246,8 @@ CREATE TRIGGER on_auth_user_created
 
 -- ENABLE ROW LEVEL SECURITY
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inventory_movements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales_orders ENABLE ROW LEVEL SECURITY;
@@ -265,7 +263,20 @@ DROP POLICY IF EXISTS "Allow individual insert profile" ON public.profiles;
 CREATE POLICY "Allow individual insert profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
 DROP POLICY IF EXISTS "Allow individual update profile" ON public.profiles;
-CREATE POLICY "Allow individual update profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Allow individual update profile" ON public.profiles FOR UPDATE USING (true);
+
+-- ROLES & USER_ROLES POLICIES FOR ADMIN MANAGEMENT
+DROP POLICY IF EXISTS "Allow authenticated read roles" ON public.roles;
+CREATE POLICY "Allow authenticated read roles" ON public.roles FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated read user_roles" ON public.user_roles;
+CREATE POLICY "Allow authenticated read user_roles" ON public.user_roles FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated insert user_roles" ON public.user_roles;
+CREATE POLICY "Allow authenticated insert user_roles" ON public.user_roles FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow authenticated delete user_roles" ON public.user_roles;
+CREATE POLICY "Allow authenticated delete user_roles" ON public.user_roles FOR DELETE TO authenticated USING (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read products" ON public.products;
 CREATE POLICY "Allow authenticated read products" ON public.products FOR SELECT TO authenticated USING (true);
