@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ShoppingCart, Plus, ArrowLeft, Search, Trash2, CheckCircle2, Clock, Truck, Factory, ArrowRight, MapPin } from "lucide-react";
+import { ShoppingCart, Plus, ArrowLeft, Search, Trash2, MapPin, ArrowRight, Package } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -38,14 +38,6 @@ interface ProductCatalogItem {
   default_uom: string;
 }
 
-const DEFAULT_PRODUCTS: ProductCatalogItem[] = [
-  { sku: "FG-CHEM-500", name: "JRC Heavy Duty Industrial Degreaser", base_price: 2450.00, default_uom: "Pail (20L)" },
-  { sku: "FG-CHEM-501", name: "JRC Commercial Multi-Surface Disinfectant", base_price: 1850.00, default_uom: "Gallon (4L)" },
-  { sku: "FG-CHEM-502", name: "JRC Concentrated Liquid Detergent", base_price: 12500.00, default_uom: "Drum (200L)" },
-  { sku: "PC-SUP-012", name: "Termiticide Concentrate Premise 200SL", base_price: 4800.00, default_uom: "L" },
-  { sku: "RM-CHEM-001", name: "Sodium Hydroxide Caustic Soda Flakes", base_price: 85.00, default_uom: "KG" },
-];
-
 const SCENT_OPTIONS = [
   { name: "Unscented / Industrial Standard", addon: 0.00 },
   { name: "Lemon Fresh", addon: 30.00 },
@@ -77,19 +69,20 @@ const PAYMENT_TERM_OPTIONS = [
   "NET 90 Days",
 ];
 
-const LOCAL_STORAGE_KEY = "jrc_products_cache_v1";
+const LOCAL_STORAGE_PRODUCTS_KEY = "jrc_products_cache_v1";
+const LOCAL_STORAGE_SALES_KEY = "jrc_sales_orders_cache_v1";
 
 export default function SalesPage() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
-  const [availableProducts, setAvailableProducts] = useState<ProductCatalogItem[]>(DEFAULT_PRODUCTS);
+  const [availableProducts, setAvailableProducts] = useState<ProductCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Form State
-  const [customerName, setCustomerName] = useState("San Miguel Food Group");
+  // Clean Blank Initial Form State (No Hardcoded Placeholder Strings)
+  const [customerName, setCustomerName] = useState("");
   const [clientPoRef, setClientPoRef] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("San Miguel Complex, 40 San Miguel Ave, Mandaluyong City, Metro Manila");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("NET 30 Days");
 
   // Multi Line Items State
@@ -97,23 +90,18 @@ export default function SalesPage() {
 
   // Load Catalog Products dynamically from local storage & Supabase
   const loadProductCatalog = async () => {
-    let combinedList: ProductCatalogItem[] = [...DEFAULT_PRODUCTS];
+    let combinedList: ProductCatalogItem[] = [];
 
     try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      const stored = localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        const mapped: ProductCatalogItem[] = parsed.map((p: any) => ({
+        combinedList = parsed.map((p: any) => ({
           sku: p.sku,
           name: p.name,
-          base_price: Number(p.selling_price) || Number(p.unit_cost) || 100,
+          base_price: Number(p.selling_price) || Number(p.unit_cost) || 0,
           default_uom: p.uom || "PCS",
         }));
-        
-        const map = new Map<string, ProductCatalogItem>();
-        combinedList.forEach((item) => map.set(item.sku, item));
-        mapped.forEach((item) => map.set(item.sku, item));
-        combinedList = Array.from(map.values());
       }
     } catch (e) {
       console.error("Local storage product read error:", e);
@@ -126,7 +114,7 @@ export default function SalesPage() {
         const mappedRemote: ProductCatalogItem[] = data.map((p: any) => ({
           sku: p.sku,
           name: p.name,
-          base_price: Number(p.selling_price) || Number(p.unit_cost) || 100,
+          base_price: Number(p.selling_price) || Number(p.unit_cost) || 0,
           default_uom: p.uom || "PCS",
         }));
 
@@ -141,36 +129,50 @@ export default function SalesPage() {
 
     setAvailableProducts(combinedList);
 
-    if (combinedList.length > 0 && lineItems.length === 0) {
+    // Initialize line items with first available user product if exists
+    if (combinedList.length > 0) {
       const firstProd = combinedList[0];
       setLineItems([
         {
-          id: "item-1",
+          id: `item-${Date.now()}`,
           product_sku: firstProd.sku,
           product_name: firstProd.name,
           scent: "Unscented / Industrial Standard",
           scent_addon: 0,
-          qty: 10,
+          qty: 1,
           uom: firstProd.default_uom,
           unit_price: firstProd.base_price,
-          total_price: firstProd.base_price * 10,
+          total_price: firstProd.base_price,
         },
       ]);
+    } else {
+      setLineItems([]);
     }
   };
 
   const fetchOrders = async () => {
     setLoading(true);
+
+    // Read cached sales orders
+    try {
+      const cached = localStorage.getItem(LOCAL_STORAGE_SALES_KEY);
+      if (cached) {
+        setOrders(JSON.parse(cached));
+      }
+    } catch (e) {
+      console.error("Sales cache error:", e);
+    }
+
     try {
       const supabase = createClient();
       const { data, error } = await supabase.from("sales_orders").select("*").order("created_at", { ascending: false });
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
         const formatted: SalesOrder[] = data.map((o) => ({
           id: o.id,
           order_number: o.order_number || `SO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-          customer_name: o.customer_name || "Commercial Account",
-          client_po_ref: o.client_po_ref || "PO-CLIENT-8891",
-          delivery_address: o.delivery_address || "San Miguel Complex, Mandaluyong City",
+          customer_name: o.customer_name || "Account",
+          client_po_ref: o.client_po_ref || "PO-CLIENT",
+          delivery_address: o.delivery_address || "",
           order_date: new Date(o.created_at || Date.now()).toISOString().split("T")[0],
           total_amount: Number(o.total_amount) || 0,
           status: o.status || "APPROVED",
@@ -179,6 +181,7 @@ export default function SalesPage() {
           items: [],
         }));
         setOrders(formatted);
+        localStorage.setItem(LOCAL_STORAGE_SALES_KEY, JSON.stringify(formatted));
       }
     } catch (err) {
       console.error("Notice loading sales orders:", err);
@@ -194,7 +197,8 @@ export default function SalesPage() {
 
   // Multi-item handlers
   const handleAddLineItem = () => {
-    const defaultProd = availableProducts[0] || DEFAULT_PRODUCTS[0];
+    if (availableProducts.length === 0) return;
+    const defaultProd = availableProducts[0];
     const newItem: OrderLineItem = {
       id: `item-${Date.now()}`,
       product_sku: defaultProd.sku,
@@ -210,7 +214,6 @@ export default function SalesPage() {
   };
 
   const handleRemoveLineItem = (id: string) => {
-    if (lineItems.length === 1) return;
     setLineItems(lineItems.filter((item) => item.id !== id));
   };
 
@@ -269,7 +272,14 @@ export default function SalesPage() {
       items: lineItems,
     };
 
-    setOrders([newOrder, ...orders]);
+    const updatedOrders = [newOrder, ...orders];
+    setOrders(updatedOrders);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_SALES_KEY, JSON.stringify(updatedOrders));
+    } catch (e) {
+      console.error("Local storage write error:", e);
+    }
+
     setIsModalOpen(false);
 
     try {
@@ -284,7 +294,9 @@ export default function SalesPage() {
       console.error("Error saving sales order to Supabase:", err);
     }
 
+    setCustomerName("");
     setClientPoRef("");
+    setDeliveryAddress("");
   };
 
   const filteredOrders = orders.filter((o) =>
@@ -307,7 +319,7 @@ export default function SalesPage() {
               <ShoppingCart className="w-6 h-6 text-amber-400" />
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">Sales Orders & Cross-Department Dispatch</h1>
             </div>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium">Log client POs with delivery addresses, dynamic catalog SKUs, scents, and credit terms</p>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">Log client POs with custom delivery addresses, dynamic catalog SKUs, scents, and credit terms</p>
           </div>
         </div>
 
@@ -337,81 +349,96 @@ export default function SalesPage() {
         </div>
       </div>
 
-      {/* MOBILE RESPONSIVE CARDS VIEW */}
-      <div className="block lg:hidden space-y-4">
-        {filteredOrders.map((o) => (
-          <div key={o.id} className="p-5 rounded-2xl bg-[#0b132b] border border-[#1c2541] space-y-3 shadow-xl">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-sm font-extrabold text-amber-400">{o.order_number}</span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                {o.status}
-              </span>
-            </div>
-
-            <div className="space-y-1">
-              <h3 className="text-sm font-bold text-white">{o.customer_name}</h3>
-              <p className="text-xs text-slate-400 font-mono">Client PO Ref: <span className="text-amber-400 font-semibold">{o.client_po_ref}</span></p>
-              <p className="text-xs text-slate-300 flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span className="truncate">{o.delivery_address}</span>
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[#1c2541]">
-              <div>
-                <span className="text-slate-400 text-[10px] block">Grand Total (inc VAT)</span>
-                <span className="font-mono font-extrabold text-slate-100 text-sm">₱{o.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div>
-                <span className="text-slate-400 text-[10px] block">Payment Terms</span>
-                <span className="font-mono font-bold text-emerald-400">{o.payment_terms} ({o.payment_status})</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* DESKTOP DATA TABLE */}
-      <div className="hidden lg:block p-5 rounded-2xl bg-[#0b132b] border border-[#1c2541] overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-[#1c2541] text-xs text-slate-400 uppercase tracking-wider">
-              <th className="py-3 px-3">SO Number</th>
-              <th className="py-3 px-3">Customer Account</th>
-              <th className="py-3 px-3">Client Email PO Ref</th>
-              <th className="py-3 px-3">Delivery Address</th>
-              <th className="py-3 px-3">Terms</th>
-              <th className="py-3 px-3">Total Amount (₱)</th>
-              <th className="py-3 px-3">Workflow Status</th>
-              <th className="py-3 px-3">Payment</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#1c2541] text-sm text-slate-200">
+      {/* EMPTY STATE OR MOBILE CARDS VIEW */}
+      {filteredOrders.length === 0 ? (
+        <div className="p-12 text-center bg-[#0b132b] border border-[#1c2541] rounded-2xl space-y-3">
+          <ShoppingCart className="w-12 h-12 text-slate-600 mx-auto" />
+          <h3 className="text-base font-extrabold text-white">No Sales Orders Logged Yet</h3>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            Click "+ New Sales Order (From Email PO)" to enter your customer's PO reference, delivery address, and ordered chemical products.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* MOBILE RESPONSIVE CARDS VIEW */}
+          <div className="block lg:hidden space-y-4">
             {filteredOrders.map((o) => (
-              <tr key={o.id} className="hover:bg-[#131c35]/50 transition-colors">
-                <td className="py-3.5 px-3 font-mono font-extrabold text-amber-400">{o.order_number}</td>
-                <td className="py-3.5 px-3 font-bold text-slate-100">{o.customer_name}</td>
-                <td className="py-3.5 px-3 font-mono text-slate-300">{o.client_po_ref}</td>
-                <td className="py-3.5 px-3 text-slate-300 max-w-[200px] truncate">{o.delivery_address}</td>
-                <td className="py-3.5 px-3 font-mono text-slate-300">{o.payment_terms}</td>
-                <td className="py-3.5 px-3 font-mono font-bold text-white">₱{o.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                <td className="py-3.5 px-3">
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+              <div key={o.id} className="p-5 rounded-2xl bg-[#0b132b] border border-[#1c2541] space-y-3 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-sm font-extrabold text-amber-400">{o.order_number}</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/40">
                     {o.status}
                   </span>
-                </td>
-                <td className="py-3.5 px-3">
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400/20 text-amber-400 border border-amber-400/40">
-                    {o.payment_status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </div>
 
-      {/* DYNAMIC MULTI-ITEM SALES ORDER MODAL WITH DELIVERY ADDRESS */}
+                <div className="space-y-1">
+                  <h3 className="text-sm font-bold text-white">{o.customer_name}</h3>
+                  <p className="text-xs text-slate-400 font-mono">Client PO Ref: <span className="text-amber-400 font-semibold">{o.client_po_ref}</span></p>
+                  {o.delivery_address && (
+                    <p className="text-xs text-slate-300 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="truncate">{o.delivery_address}</span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[#1c2541]">
+                  <div>
+                    <span className="text-slate-400 text-[10px] block">Grand Total (inc VAT)</span>
+                    <span className="font-mono font-extrabold text-slate-100 text-sm">₱{o.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] block">Payment Terms</span>
+                    <span className="font-mono font-bold text-emerald-400">{o.payment_terms} ({o.payment_status})</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* DESKTOP DATA TABLE */}
+          <div className="hidden lg:block p-5 rounded-2xl bg-[#0b132b] border border-[#1c2541] overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-[#1c2541] text-xs text-slate-400 uppercase tracking-wider">
+                  <th className="py-3 px-3">SO Number</th>
+                  <th className="py-3 px-3">Customer Account</th>
+                  <th className="py-3 px-3">Client Email PO Ref</th>
+                  <th className="py-3 px-3">Delivery Address</th>
+                  <th className="py-3 px-3">Terms</th>
+                  <th className="py-3 px-3">Total Amount (₱)</th>
+                  <th className="py-3 px-3">Workflow Status</th>
+                  <th className="py-3 px-3">Payment</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#1c2541] text-sm text-slate-200">
+                {filteredOrders.map((o) => (
+                  <tr key={o.id} className="hover:bg-[#131c35]/50 transition-colors">
+                    <td className="py-3.5 px-3 font-mono font-extrabold text-amber-400">{o.order_number}</td>
+                    <td className="py-3.5 px-3 font-bold text-slate-100">{o.customer_name}</td>
+                    <td className="py-3.5 px-3 font-mono text-slate-300">{o.client_po_ref}</td>
+                    <td className="py-3.5 px-3 text-slate-300 max-w-[200px] truncate">{o.delivery_address || "—"}</td>
+                    <td className="py-3.5 px-3 font-mono text-slate-300">{o.payment_terms}</td>
+                    <td className="py-3.5 px-3 font-mono font-bold text-white">₱{o.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="py-3.5 px-3">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                        {o.status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-3">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400/20 text-amber-400 border border-amber-400/40">
+                        {o.payment_status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* DYNAMIC MULTI-ITEM SALES ORDER MODAL WITH CLEAN BLANK INPUTS */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-[#0b132b] border border-[#1c2541] rounded-2xl w-full max-w-3xl p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
@@ -426,17 +453,15 @@ export default function SalesPage() {
             <form onSubmit={handleCreateSalesOrder} className="space-y-4 text-xs sm:text-sm">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="text-slate-200 font-bold block mb-1">Customer Account</label>
-                  <select
+                  <label className="text-slate-200 font-bold block mb-1">Customer Account Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Client Company Name"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold"
-                  >
-                    <option value="San Miguel Food Group">San Miguel Food Group</option>
-                    <option value="Century Pacific Manufacturing">Century Pacific Manufacturing</option>
-                    <option value="Robinsons Supermarket Logistics">Robinsons Supermarket Logistics</option>
-                    <option value="Universal Robina Corporation">Universal Robina Corporation</option>
-                  </select>
+                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold focus:border-amber-400"
+                  />
                 </div>
 
                 <div>
@@ -444,10 +469,10 @@ export default function SalesPage() {
                   <input
                     type="text"
                     required
-                    placeholder="PO-SMG-2026-991"
+                    placeholder="e.g. PO-2026-CLIENT-001"
                     value={clientPoRef}
                     onChange={(e) => setClientPoRef(e.target.value)}
-                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-mono"
+                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-mono focus:border-amber-400"
                   />
                 </div>
 
@@ -474,7 +499,7 @@ export default function SalesPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Complete Delivery Address (Plant site, warehouse location, city...)"
+                  placeholder="Enter complete delivery address (Plant site, street, city)..."
                   value={deliveryAddress}
                   onChange={(e) => setDeliveryAddress(e.target.value)}
                   className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold focus:border-amber-400"
@@ -487,99 +512,111 @@ export default function SalesPage() {
                   <span className="text-xs font-extrabold text-amber-400 uppercase tracking-wider">
                     Ordered Line Items ({lineItems.length})
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleAddLineItem}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-400 hover:bg-amber-400/20 text-xs font-bold transition-all"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>+ Add Line Item</span>
-                  </button>
+                  {availableProducts.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleAddLineItem}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-400 hover:bg-amber-400/20 text-xs font-bold transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>+ Add Line Item</span>
+                    </button>
+                  )}
                 </div>
 
-                <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                  {lineItems.map((item, index) => (
-                    <div key={item.id} className="p-3 sm:p-4 rounded-xl bg-[#131c35] border border-[#1c2541] space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-400">Item #{index + 1}</span>
-                        {lineItems.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveLineItem(item.id)}
-                            className="text-rose-400 hover:text-rose-300 p-1"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-slate-300 block mb-1 text-xs font-bold">Product SKU (Dynamic Catalog)</label>
-                          <select
-                            value={item.product_sku}
-                            onChange={(e) => handleUpdateLineItem(item.id, "product_sku", e.target.value)}
-                            className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-slate-100 font-semibold"
-                          >
-                            {availableProducts.map((p) => (
-                              <option key={p.sku} value={p.sku}>
-                                {p.name} ({p.sku} — Base ₱{p.base_price.toFixed(2)})
-                              </option>
-                            ))}
-                          </select>
+                {availableProducts.length === 0 ? (
+                  <div className="p-6 text-center bg-[#131c35] border border-[#1c2541] rounded-xl space-y-2">
+                    <Package className="w-8 h-8 text-slate-500 mx-auto" />
+                    <p className="text-xs text-amber-400 font-bold">No products in catalog yet.</p>
+                    <p className="text-[11px] text-slate-400">
+                      Go to <Link href="/products" className="text-amber-400 underline">Product Catalog Master</Link> to add your chemical products first.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                    {lineItems.map((item, index) => (
+                      <div key={item.id} className="p-3 sm:p-4 rounded-xl bg-[#131c35] border border-[#1c2541] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-400">Item #{index + 1}</span>
+                          {lineItems.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveLineItem(item.id)}
+                              className="text-rose-400 hover:text-rose-300 p-1"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
 
-                        <div>
-                          <label className="text-slate-300 block mb-1 text-xs font-bold">Scent / Fragrance Variant</label>
-                          <select
-                            value={item.scent}
-                            onChange={(e) => handleUpdateLineItem(item.id, "scent", e.target.value)}
-                            className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-amber-400 font-semibold"
-                          >
-                            {SCENT_OPTIONS.map((s) => (
-                              <option key={s.name} value={s.name}>
-                                {s.name} {s.addon > 0 ? `(+₱${s.addon.toFixed(2)})` : ""}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-slate-300 block mb-1 text-xs font-bold">Product SKU (Dynamic Catalog)</label>
+                            <select
+                              value={item.product_sku}
+                              onChange={(e) => handleUpdateLineItem(item.id, "product_sku", e.target.value)}
+                              className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-slate-100 font-semibold"
+                            >
+                              {availableProducts.map((p) => (
+                                <option key={p.sku} value={p.sku}>
+                                  {p.name} ({p.sku} — Base ₱{p.base_price.toFixed(2)})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
 
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="text-slate-300 block mb-1 text-xs">Quantity</label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.qty}
-                            onChange={(e) => handleUpdateLineItem(item.id, "qty", Number(e.target.value))}
-                            className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs font-mono font-bold text-white"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-slate-300 block mb-1 text-xs">Unit of Measure (UOM)</label>
-                          <select
-                            value={item.uom}
-                            onChange={(e) => handleUpdateLineItem(item.id, "uom", e.target.value)}
-                            className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-slate-100 font-mono"
-                          >
-                            {UOM_OPTIONS.map((uom) => (
-                              <option key={uom} value={uom}>{uom}</option>
-                            ))}
-                          </select>
+                          <div>
+                            <label className="text-slate-300 block mb-1 text-xs font-bold">Scent / Fragrance Variant</label>
+                            <select
+                              value={item.scent}
+                              onChange={(e) => handleUpdateLineItem(item.id, "scent", e.target.value)}
+                              className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-amber-400 font-semibold"
+                            >
+                              {SCENT_OPTIONS.map((s) => (
+                                <option key={s.name} value={s.name}>
+                                  {s.name} {s.addon > 0 ? `(+₱${s.addon.toFixed(2)})` : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
 
-                        <div>
-                          <label className="text-slate-300 block mb-1 text-xs">Subtotal (₱)</label>
-                          <div className="p-2 bg-[#080e1e] border border-[#1c2541] rounded-lg text-xs font-mono font-bold text-amber-400 text-right">
-                            ₱{item.total_price.toFixed(2)}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-slate-300 block mb-1 text-xs">Quantity</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.qty}
+                              onChange={(e) => handleUpdateLineItem(item.id, "qty", Number(e.target.value))}
+                              className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs font-mono font-bold text-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-slate-300 block mb-1 text-xs">Unit of Measure (UOM)</label>
+                            <select
+                              value={item.uom}
+                              onChange={(e) => handleUpdateLineItem(item.id, "uom", e.target.value)}
+                              className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-slate-100 font-mono"
+                            >
+                              {UOM_OPTIONS.map((uom) => (
+                                <option key={uom} value={uom}>{uom}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-slate-300 block mb-1 text-xs">Subtotal (₱)</label>
+                            <div className="p-2 bg-[#080e1e] border border-[#1c2541] rounded-lg text-xs font-mono font-bold text-amber-400 text-right">
+                              ₱{item.total_price.toFixed(2)}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* FINANCIAL SUMMARY */}
                 <div className="p-4 rounded-xl bg-[#131c35] border border-[#1c2541] space-y-1.5 font-mono text-xs sm:text-sm">
@@ -598,13 +635,6 @@ export default function SalesPage() {
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs flex items-start gap-2">
-                <ArrowRight className="w-4 h-4 shrink-0 text-purple-400 mt-0.5" />
-                <span>
-                  <strong>Automated Multi-Item Dispatch:</strong> Transmitting this PO reserves stock for all line items, queues Logistics dispatch to the delivery address, and opens a Finance AR invoice.
-                </span>
-              </div>
-
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
@@ -615,9 +645,10 @@ export default function SalesPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-extrabold shadow-lg shadow-yellow-500/20"
+                  disabled={availableProducts.length === 0}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-extrabold shadow-lg shadow-yellow-500/20 disabled:opacity-50"
                 >
-                  Transmit Multi-Item Order Across Departments
+                  Transmit Order Across Departments
                 </button>
               </div>
             </form>
