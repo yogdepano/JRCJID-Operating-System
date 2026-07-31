@@ -203,22 +203,40 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 );
 
 -- 11. AUTOMATIC PROFILE CREATION TRIGGER FOR SUPABASE AUTH
+-- Automatically grants super_admin role to the FIRST user who registers!
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+    user_count INTEGER;
+    admin_role_id UUID;
 BEGIN
+    -- Insert profile
     INSERT INTO public.profiles (id, email, first_name, last_name, department)
     VALUES (
         NEW.id,
         NEW.email,
         COALESCE(NEW.raw_user_meta_data->>'first_name', 'Employee'),
         COALESCE(NEW.raw_user_meta_data->>'last_name', 'User'),
-        COALESCE(NEW.raw_user_meta_data->>'department', 'General')
+        COALESCE(NEW.raw_user_meta_data->>'department', 'Executive Management')
     )
     ON CONFLICT (id) DO UPDATE SET
         email = EXCLUDED.email,
         first_name = EXCLUDED.first_name,
         last_name = EXCLUDED.last_name,
         department = EXCLUDED.department;
+
+    -- Check total existing profiles
+    SELECT COUNT(*) INTO user_count FROM public.profiles;
+
+    -- If this is the FIRST registered user in the database, automatically assign super_admin role!
+    IF user_count = 1 THEN
+        SELECT id INTO admin_role_id FROM public.roles WHERE code = 'super_admin';
+        IF admin_role_id IS NOT NULL THEN
+            INSERT INTO public.user_roles (user_id, role_id)
+            VALUES (NEW.id, admin_role_id)
+            ON CONFLICT (user_id, role_id) DO NOTHING;
+        END IF;
+    END IF;
 
     RETURN NEW;
 END;
