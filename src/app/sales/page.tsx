@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ShoppingCart, Plus, ArrowLeft, Search, Trash2, CheckCircle2, Clock, Truck, Factory, ArrowRight } from "lucide-react";
+import { ShoppingCart, Plus, ArrowLeft, Search, Trash2, CheckCircle2, Clock, Truck, Factory, ArrowRight, MapPin } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -22,6 +22,7 @@ interface SalesOrder {
   order_number: string;
   customer_name: string;
   client_po_ref: string;
+  delivery_address: string;
   order_date: string;
   total_amount: number;
   status: "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "IN_PRODUCTION" | "DISPATCHED" | "COMPLETED" | "CANCELLED";
@@ -30,7 +31,14 @@ interface SalesOrder {
   items: OrderLineItem[];
 }
 
-const AVAILABLE_PRODUCTS = [
+interface ProductCatalogItem {
+  sku: string;
+  name: string;
+  base_price: number;
+  default_uom: string;
+}
+
+const DEFAULT_PRODUCTS: ProductCatalogItem[] = [
   { sku: "FG-CHEM-500", name: "JRC Heavy Duty Industrial Degreaser", base_price: 2450.00, default_uom: "Pail (20L)" },
   { sku: "FG-CHEM-501", name: "JRC Commercial Multi-Surface Disinfectant", base_price: 1850.00, default_uom: "Gallon (4L)" },
   { sku: "FG-CHEM-502", name: "JRC Concentrated Liquid Detergent", base_price: 12500.00, default_uom: "Drum (200L)" },
@@ -69,8 +77,11 @@ const PAYMENT_TERM_OPTIONS = [
   "NET 90 Days",
 ];
 
+const LOCAL_STORAGE_KEY = "jrc_products_cache_v1";
+
 export default function SalesPage() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
+  const [availableProducts, setAvailableProducts] = useState<ProductCatalogItem[]>(DEFAULT_PRODUCTS);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -78,22 +89,75 @@ export default function SalesPage() {
   // Form State
   const [customerName, setCustomerName] = useState("San Miguel Food Group");
   const [clientPoRef, setClientPoRef] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("San Miguel Complex, 40 San Miguel Ave, Mandaluyong City, Metro Manila");
   const [paymentTerms, setPaymentTerms] = useState("NET 30 Days");
 
   // Multi Line Items State
-  const [lineItems, setLineItems] = useState<OrderLineItem[]>([
-    {
-      id: "item-1",
-      product_sku: "FG-CHEM-500",
-      product_name: "JRC Heavy Duty Industrial Degreaser",
-      scent: "Unscented / Industrial Standard",
-      scent_addon: 0,
-      qty: 10,
-      uom: "Pail (20L)",
-      unit_price: 2450.00,
-      total_price: 24500.00,
-    },
-  ]);
+  const [lineItems, setLineItems] = useState<OrderLineItem[]>([]);
+
+  // Load Catalog Products dynamically from local storage & Supabase
+  const loadProductCatalog = async () => {
+    let combinedList: ProductCatalogItem[] = [...DEFAULT_PRODUCTS];
+
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const mapped: ProductCatalogItem[] = parsed.map((p: any) => ({
+          sku: p.sku,
+          name: p.name,
+          base_price: Number(p.selling_price) || Number(p.unit_cost) || 100,
+          default_uom: p.uom || "PCS",
+        }));
+        
+        const map = new Map<string, ProductCatalogItem>();
+        combinedList.forEach((item) => map.set(item.sku, item));
+        mapped.forEach((item) => map.set(item.sku, item));
+        combinedList = Array.from(map.values());
+      }
+    } catch (e) {
+      console.error("Local storage product read error:", e);
+    }
+
+    try {
+      const supabase = createClient();
+      const { data } = await supabase.from("products").select("*");
+      if (data && data.length > 0) {
+        const mappedRemote: ProductCatalogItem[] = data.map((p: any) => ({
+          sku: p.sku,
+          name: p.name,
+          base_price: Number(p.selling_price) || Number(p.unit_cost) || 100,
+          default_uom: p.uom || "PCS",
+        }));
+
+        const map = new Map<string, ProductCatalogItem>();
+        combinedList.forEach((item) => map.set(item.sku, item));
+        mappedRemote.forEach((item) => map.set(item.sku, item));
+        combinedList = Array.from(map.values());
+      }
+    } catch (err) {
+      console.error("Supabase product fetch error:", err);
+    }
+
+    setAvailableProducts(combinedList);
+
+    if (combinedList.length > 0 && lineItems.length === 0) {
+      const firstProd = combinedList[0];
+      setLineItems([
+        {
+          id: "item-1",
+          product_sku: firstProd.sku,
+          product_name: firstProd.name,
+          scent: "Unscented / Industrial Standard",
+          scent_addon: 0,
+          qty: 10,
+          uom: firstProd.default_uom,
+          unit_price: firstProd.base_price,
+          total_price: firstProd.base_price * 10,
+        },
+      ]);
+    }
+  };
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -106,6 +170,7 @@ export default function SalesPage() {
           order_number: o.order_number || `SO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
           customer_name: o.customer_name || "Commercial Account",
           client_po_ref: o.client_po_ref || "PO-CLIENT-8891",
+          delivery_address: o.delivery_address || "San Miguel Complex, Mandaluyong City",
           order_date: new Date(o.created_at || Date.now()).toISOString().split("T")[0],
           total_amount: Number(o.total_amount) || 0,
           status: o.status || "APPROVED",
@@ -124,11 +189,12 @@ export default function SalesPage() {
 
   useEffect(() => {
     fetchOrders();
+    loadProductCatalog();
   }, []);
 
   // Multi-item handlers
   const handleAddLineItem = () => {
-    const defaultProd = AVAILABLE_PRODUCTS[0];
+    const defaultProd = availableProducts[0] || DEFAULT_PRODUCTS[0];
     const newItem: OrderLineItem = {
       id: `item-${Date.now()}`,
       product_sku: defaultProd.sku,
@@ -144,7 +210,7 @@ export default function SalesPage() {
   };
 
   const handleRemoveLineItem = (id: string) => {
-    if (lineItems.length === 1) return; // Keep at least 1 item
+    if (lineItems.length === 1) return;
     setLineItems(lineItems.filter((item) => item.id !== id));
   };
 
@@ -155,7 +221,7 @@ export default function SalesPage() {
           const updated = { ...item, [field]: value };
           
           if (field === "product_sku") {
-            const prod = AVAILABLE_PRODUCTS.find((p) => p.sku === value);
+            const prod = availableProducts.find((p) => p.sku === value);
             if (prod) {
               updated.product_name = prod.name;
               updated.uom = prod.default_uom;
@@ -167,7 +233,7 @@ export default function SalesPage() {
             const scentObj = SCENT_OPTIONS.find((s) => s.name === value);
             const addon = scentObj ? scentObj.addon : 0;
             updated.scent_addon = addon;
-            const baseProd = AVAILABLE_PRODUCTS.find((p) => p.sku === updated.product_sku);
+            const baseProd = availableProducts.find((p) => p.sku === updated.product_sku);
             const base = baseProd ? baseProd.base_price : updated.unit_price;
             updated.unit_price = base + addon;
           }
@@ -194,6 +260,7 @@ export default function SalesPage() {
       order_number: orderNo,
       customer_name: customerName,
       client_po_ref: clientPoRef || "EMAIL-PO-ATTACHED",
+      delivery_address: deliveryAddress,
       order_date: new Date().toISOString().split("T")[0],
       total_amount: grandTotal,
       status: "APPROVED",
@@ -223,7 +290,8 @@ export default function SalesPage() {
   const filteredOrders = orders.filter((o) =>
     o.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     o.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    o.client_po_ref.toLowerCase().includes(searchTerm.toLowerCase())
+    o.client_po_ref.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    o.delivery_address.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -239,12 +307,15 @@ export default function SalesPage() {
               <ShoppingCart className="w-6 h-6 text-amber-400" />
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">Sales Orders & Cross-Department Dispatch</h1>
             </div>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium">Log client POs with multiple items, scent variants, custom UOMs, and cash/credit terms up to 90 days</p>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">Log client POs with delivery addresses, dynamic catalog SKUs, scents, and credit terms</p>
           </div>
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            loadProductCatalog();
+            setIsModalOpen(true);
+          }}
           className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-yellow-500/20 active:scale-95 transition-all"
         >
           <Plus className="w-5 h-5" />
@@ -258,7 +329,7 @@ export default function SalesPage() {
           <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search Sales Order #, Client PO Ref, or Customer..."
+            placeholder="Search Sales Order #, Client PO Ref, Delivery Address, or Customer..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-400"
@@ -280,6 +351,10 @@ export default function SalesPage() {
             <div className="space-y-1">
               <h3 className="text-sm font-bold text-white">{o.customer_name}</h3>
               <p className="text-xs text-slate-400 font-mono">Client PO Ref: <span className="text-amber-400 font-semibold">{o.client_po_ref}</span></p>
+              <p className="text-xs text-slate-300 flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="truncate">{o.delivery_address}</span>
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[#1c2541]">
@@ -304,7 +379,7 @@ export default function SalesPage() {
               <th className="py-3 px-3">SO Number</th>
               <th className="py-3 px-3">Customer Account</th>
               <th className="py-3 px-3">Client Email PO Ref</th>
-              <th className="py-3 px-3">Order Date</th>
+              <th className="py-3 px-3">Delivery Address</th>
               <th className="py-3 px-3">Terms</th>
               <th className="py-3 px-3">Total Amount (₱)</th>
               <th className="py-3 px-3">Workflow Status</th>
@@ -317,7 +392,7 @@ export default function SalesPage() {
                 <td className="py-3.5 px-3 font-mono font-extrabold text-amber-400">{o.order_number}</td>
                 <td className="py-3.5 px-3 font-bold text-slate-100">{o.customer_name}</td>
                 <td className="py-3.5 px-3 font-mono text-slate-300">{o.client_po_ref}</td>
-                <td className="py-3.5 px-3 text-slate-400">{o.order_date}</td>
+                <td className="py-3.5 px-3 text-slate-300 max-w-[200px] truncate">{o.delivery_address}</td>
                 <td className="py-3.5 px-3 font-mono text-slate-300">{o.payment_terms}</td>
                 <td className="py-3.5 px-3 font-mono font-bold text-white">₱{o.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                 <td className="py-3.5 px-3">
@@ -336,14 +411,14 @@ export default function SalesPage() {
         </table>
       </div>
 
-      {/* ADVANCED MULTI-ITEM SALES ORDER MODAL */}
+      {/* DYNAMIC MULTI-ITEM SALES ORDER MODAL WITH DELIVERY ADDRESS */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-[#0b132b] border border-[#1c2541] rounded-2xl w-full max-w-3xl p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
             <div className="flex items-center justify-between border-b border-[#1c2541] pb-3">
               <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5 text-amber-400" />
-                <span>Log Sales Order (Multi-Item, Scents, Units & Terms)</span>
+                <span>Log Sales Order (Multi-Item, Delivery Address & Terms)</span>
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white text-lg">✕</button>
             </div>
@@ -390,7 +465,23 @@ export default function SalesPage() {
                 </div>
               </div>
 
-              {/* MULTI-ITEM ORDERED PRODUCTS SECTION */}
+              {/* DELIVERY ADDRESS FIELD */}
+              <div>
+                <label className="text-slate-200 font-bold block mb-1 flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-amber-400" />
+                  <span>Delivery / Shipping Address</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Complete Delivery Address (Plant site, warehouse location, city...)"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold focus:border-amber-400"
+                />
+              </div>
+
+              {/* DYNAMIC MULTI-ITEM ORDERED PRODUCTS SECTION */}
               <div className="border-t border-b border-[#1c2541] py-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold text-amber-400 uppercase tracking-wider">
@@ -424,20 +515,22 @@ export default function SalesPage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="text-slate-300 block mb-1 text-xs">Product SKU</label>
+                          <label className="text-slate-300 block mb-1 text-xs font-bold">Product SKU (Dynamic Catalog)</label>
                           <select
                             value={item.product_sku}
                             onChange={(e) => handleUpdateLineItem(item.id, "product_sku", e.target.value)}
-                            className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-slate-100 font-medium"
+                            className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-slate-100 font-semibold"
                           >
-                            {AVAILABLE_PRODUCTS.map((p) => (
-                              <option key={p.sku} value={p.sku}>{p.name} (Base ₱{p.base_price.toFixed(2)})</option>
+                            {availableProducts.map((p) => (
+                              <option key={p.sku} value={p.sku}>
+                                {p.name} ({p.sku} — Base ₱{p.base_price.toFixed(2)})
+                              </option>
                             ))}
                           </select>
                         </div>
 
                         <div>
-                          <label className="text-slate-300 block mb-1 text-xs">Scent / Fragrance Variant</label>
+                          <label className="text-slate-300 block mb-1 text-xs font-bold">Scent / Fragrance Variant</label>
                           <select
                             value={item.scent}
                             onChange={(e) => handleUpdateLineItem(item.id, "scent", e.target.value)}
@@ -508,7 +601,7 @@ export default function SalesPage() {
               <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs flex items-start gap-2">
                 <ArrowRight className="w-4 h-4 shrink-0 text-purple-400 mt-0.5" />
                 <span>
-                  <strong>Automated Multi-Item Dispatch:</strong> Transmitting this PO reserves stock for all line items across packaging types (Drums, Pails, Liters), alerts Production for scent formulas, and opens a Finance AR invoice.
+                  <strong>Automated Multi-Item Dispatch:</strong> Transmitting this PO reserves stock for all line items, queues Logistics dispatch to the delivery address, and opens a Finance AR invoice.
                 </span>
               </div>
 
