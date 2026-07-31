@@ -182,6 +182,34 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 11. AUTOMATIC PROFILE CREATION TRIGGER FOR SUPABASE AUTH
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id, email, first_name, last_name, department)
+    VALUES (
+        NEW.id,
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'first_name', 'Employee'),
+        COALESCE(NEW.raw_user_meta_data->>'last_name', 'User'),
+        COALESCE(NEW.raw_user_meta_data->>'department', 'General')
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
+        department = EXCLUDED.department;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- TRIGGER ATTACHED TO AUTH.USERS
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 -- ENABLE ROW LEVEL SECURITY
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
@@ -193,6 +221,9 @@ ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- RLS POLICIES
 CREATE POLICY "Allow authenticated read" ON public.profiles FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Allow individual insert profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Allow individual update profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
 CREATE POLICY "Allow authenticated read products" ON public.products FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Allow authenticated read stock" ON public.inventory_movements FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Allow authenticated read SO" ON public.sales_orders FOR SELECT TO authenticated USING (true);
