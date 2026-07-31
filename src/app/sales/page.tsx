@@ -9,8 +9,6 @@ interface OrderLineItem {
   id: string;
   product_sku: string;
   product_name: string;
-  scent: string;
-  scent_addon: number;
   qty: number;
   uom: string;
   unit_price: number;
@@ -37,15 +35,6 @@ interface ProductCatalogItem {
   base_price: number;
   default_uom: string;
 }
-
-const SCENT_OPTIONS = [
-  { name: "Unscented / Industrial Standard", addon: 0.00 },
-  { name: "Lemon Fresh", addon: 30.00 },
-  { name: "Pine Forest", addon: 35.00 },
-  { name: "Lavender Floral", addon: 50.00 },
-  { name: "Citrus Blast", addon: 40.00 },
-  { name: "Bubblegum Clean", addon: 45.00 },
-];
 
 const UOM_OPTIONS = [
   "Drum (200L)",
@@ -79,7 +68,7 @@ export default function SalesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Clean Blank Initial Form State (No Hardcoded Placeholder Strings)
+  // Clean Blank Initial Form State
   const [customerName, setCustomerName] = useState("");
   const [clientPoRef, setClientPoRef] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -129,7 +118,6 @@ export default function SalesPage() {
 
     setAvailableProducts(combinedList);
 
-    // Initialize line items with first available user product if exists
     if (combinedList.length > 0) {
       const firstProd = combinedList[0];
       setLineItems([
@@ -137,8 +125,6 @@ export default function SalesPage() {
           id: `item-${Date.now()}`,
           product_sku: firstProd.sku,
           product_name: firstProd.name,
-          scent: "Unscented / Industrial Standard",
-          scent_addon: 0,
           qty: 1,
           uom: firstProd.default_uom,
           unit_price: firstProd.base_price,
@@ -153,7 +139,6 @@ export default function SalesPage() {
   const fetchOrders = async () => {
     setLoading(true);
 
-    // Read cached sales orders
     try {
       const cached = localStorage.getItem(LOCAL_STORAGE_SALES_KEY);
       if (cached) {
@@ -203,8 +188,6 @@ export default function SalesPage() {
       id: `item-${Date.now()}`,
       product_sku: defaultProd.sku,
       product_name: defaultProd.name,
-      scent: "Unscented / Industrial Standard",
-      scent_addon: 0,
       qty: 1,
       uom: defaultProd.default_uom,
       unit_price: defaultProd.base_price,
@@ -228,17 +211,8 @@ export default function SalesPage() {
             if (prod) {
               updated.product_name = prod.name;
               updated.uom = prod.default_uom;
-              updated.unit_price = prod.base_price + updated.scent_addon;
+              updated.unit_price = prod.base_price;
             }
-          }
-
-          if (field === "scent") {
-            const scentObj = SCENT_OPTIONS.find((s) => s.name === value);
-            const addon = scentObj ? scentObj.addon : 0;
-            updated.scent_addon = addon;
-            const baseProd = availableProducts.find((p) => p.sku === updated.product_sku);
-            const base = baseProd ? baseProd.base_price : updated.unit_price;
-            updated.unit_price = base + addon;
           }
 
           updated.total_price = updated.qty * updated.unit_price;
@@ -319,7 +293,7 @@ export default function SalesPage() {
               <ShoppingCart className="w-6 h-6 text-amber-400" />
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">Sales Orders & Cross-Department Dispatch</h1>
             </div>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium">Log client POs with custom delivery addresses, dynamic catalog SKUs, scents, and credit terms</p>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">Log client POs with custom delivery addresses, dynamic catalog SKUs, and credit terms</p>
           </div>
         </div>
 
@@ -438,7 +412,7 @@ export default function SalesPage() {
         </>
       )}
 
-      {/* DYNAMIC MULTI-ITEM SALES ORDER MODAL WITH CLEAN BLANK INPUTS */}
+      {/* DYNAMIC MULTI-ITEM SALES ORDER MODAL WITH CATALOG PRICING */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-[#0b132b] border border-[#1c2541] rounded-2xl w-full max-w-3xl p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
@@ -529,7 +503,7 @@ export default function SalesPage() {
                     <Package className="w-8 h-8 text-slate-500 mx-auto" />
                     <p className="text-xs text-amber-400 font-bold">No products in catalog yet.</p>
                     <p className="text-[11px] text-slate-400">
-                      Go to <Link href="/products" className="text-amber-400 underline">Product Catalog Master</Link> to add your chemical products first.
+                      Go to <Link href="/products" className="text-amber-400 underline">Product Catalog Master</Link> to add your chemical products and scent variants first.
                     </p>
                   </div>
                 ) : (
@@ -549,39 +523,22 @@ export default function SalesPage() {
                           )}
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-slate-300 block mb-1 text-xs font-bold">Product SKU (Dynamic Catalog)</label>
-                            <select
-                              value={item.product_sku}
-                              onChange={(e) => handleUpdateLineItem(item.id, "product_sku", e.target.value)}
-                              className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-slate-100 font-semibold"
-                            >
-                              {availableProducts.map((p) => (
-                                <option key={p.sku} value={p.sku}>
-                                  {p.name} ({p.sku} — Base ₱{p.base_price.toFixed(2)})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="text-slate-300 block mb-1 text-xs font-bold">Scent / Fragrance Variant</label>
-                            <select
-                              value={item.scent}
-                              onChange={(e) => handleUpdateLineItem(item.id, "scent", e.target.value)}
-                              className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-amber-400 font-semibold"
-                            >
-                              {SCENT_OPTIONS.map((s) => (
-                                <option key={s.name} value={s.name}>
-                                  {s.name} {s.addon > 0 ? `(+₱${s.addon.toFixed(2)})` : ""}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                        <div>
+                          <label className="text-slate-300 block mb-1 text-xs font-bold">Select Product Item & Variant from Catalog</label>
+                          <select
+                            value={item.product_sku}
+                            onChange={(e) => handleUpdateLineItem(item.id, "product_sku", e.target.value)}
+                            className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold"
+                          >
+                            {availableProducts.map((p) => (
+                              <option key={p.sku} value={p.sku}>
+                                {p.name} ({p.sku} — ₱{p.base_price.toFixed(2)} / {p.default_uom})
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-3 gap-3">
                           <div>
                             <label className="text-slate-300 block mb-1 text-xs">Quantity</label>
                             <input
@@ -589,7 +546,7 @@ export default function SalesPage() {
                               min="1"
                               value={item.qty}
                               onChange={(e) => handleUpdateLineItem(item.id, "qty", Number(e.target.value))}
-                              className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs font-mono font-bold text-white"
+                              className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs font-mono font-bold text-white"
                             />
                           </div>
 
@@ -598,7 +555,7 @@ export default function SalesPage() {
                             <select
                               value={item.uom}
                               onChange={(e) => handleUpdateLineItem(item.id, "uom", e.target.value)}
-                              className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-slate-100 font-mono"
+                              className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs text-slate-100 font-mono"
                             >
                               {UOM_OPTIONS.map((uom) => (
                                 <option key={uom} value={uom}>{uom}</option>
@@ -607,8 +564,8 @@ export default function SalesPage() {
                           </div>
 
                           <div>
-                            <label className="text-slate-300 block mb-1 text-xs">Subtotal (₱)</label>
-                            <div className="p-2 bg-[#080e1e] border border-[#1c2541] rounded-lg text-xs font-mono font-bold text-amber-400 text-right">
+                            <label className="text-slate-300 block mb-1 text-xs">Item Subtotal (₱)</label>
+                            <div className="p-2.5 bg-[#080e1e] border border-[#1c2541] rounded-xl text-xs font-mono font-bold text-amber-400 text-right">
                               ₱{item.total_price.toFixed(2)}
                             </div>
                           </div>

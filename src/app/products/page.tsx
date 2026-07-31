@@ -9,6 +9,7 @@ interface Product {
   id: string;
   sku: string;
   name: string;
+  variant_scent: string;
   category: "raw_material" | "finished_chemical" | "packaging" | "pest_control_supply";
   uom: string;
   min_reorder_level: number;
@@ -20,6 +21,7 @@ interface Product {
 interface NewProductItem {
   id: string;
   name: string;
+  variant_scent: string;
   sku: string;
   category: Product["category"];
   uom: string;
@@ -39,17 +41,17 @@ export default function ProductsPage() {
   const [newItems, setNewItems] = useState<NewProductItem[]>([
     {
       id: "item-1",
-      name: "Isopropyl Alcohol 99%",
-      sku: "RM-IA9-99",
-      category: "raw_material",
-      uom: "Drum",
-      unit_cost: 17000,
-      selling_price: 18500,
+      name: "",
+      variant_scent: "Standard / Unscented",
+      sku: "",
+      category: "finished_chemical",
+      uom: "Drum (200L)",
+      unit_cost: 0,
+      selling_price: 0,
     },
   ]);
 
   const fetchProducts = async () => {
-    // 1. Try loading cached local storage products first
     let cachedList: Product[] = [];
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -61,13 +63,23 @@ export default function ProductsPage() {
       console.error("Local storage error:", e);
     }
 
-    // 2. Fetch live data from Supabase
     try {
       const supabase = createClient();
       const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
       if (!error && data && data.length > 0) {
-        const remoteList = data as Product[];
-        // Merge remote and cached without duplicates
+        const remoteList = data.map((p: any) => ({
+          id: p.id,
+          sku: p.sku,
+          name: p.name,
+          variant_scent: p.variant_scent || "Standard",
+          category: p.category,
+          uom: p.uom,
+          min_reorder_level: Number(p.min_reorder_level) || 10,
+          current_stock: Number(p.current_stock) || 0,
+          unit_cost: Number(p.unit_cost) || 0,
+          selling_price: Number(p.selling_price) || 0,
+        }));
+
         const combinedMap = new Map<string, Product>();
         cachedList.forEach((p) => combinedMap.set(p.sku, p));
         remoteList.forEach((p) => combinedMap.set(p.sku, p));
@@ -85,7 +97,7 @@ export default function ProductsPage() {
   }, []);
 
   // AUTO SKU GENERATOR LOGIC
-  const generateSkuFromName = (productName: string, cat: Product["category"]) => {
+  const generateSkuFromName = (productName: string, cat: Product["category"], variant: string) => {
     if (!productName.trim()) return "";
     
     const categoryPrefixMap: Record<Product["category"], string> = {
@@ -105,10 +117,15 @@ export default function ProductsPage() {
       nameCode = words.map((w) => w[0]).join("").toUpperCase().substring(0, 4);
     }
 
-    const numbersMatch = productName.match(/\d+/);
-    const numPart = numbersMatch ? `-${numbersMatch[0]}` : `-${Math.floor(100 + Math.random() * 900)}`;
+    let scentCode = "";
+    if (variant && variant !== "Standard / Unscented") {
+      scentCode = `-${variant.substring(0, 3).toUpperCase()}`;
+    }
 
-    return `${prefix}-${nameCode}${numPart}`;
+    const numbersMatch = productName.match(/\d+/);
+    const numPart = numbersMatch ? `-${numbersMatch[0]}` : "";
+
+    return `${prefix}-${nameCode}${scentCode}${numPart}`;
   };
 
   // MULTI-ITEM FORM HANDLERS
@@ -116,9 +133,10 @@ export default function ProductsPage() {
     const newItem: NewProductItem = {
       id: `item-${Date.now()}`,
       name: "",
+      variant_scent: "Standard / Unscented",
       sku: "",
-      category: "raw_material",
-      uom: "Drum",
+      category: "finished_chemical",
+      uom: "Drum (200L)",
       unit_cost: 0,
       selling_price: 0,
     };
@@ -135,8 +153,8 @@ export default function ProductsPage() {
       newItems.map((item) => {
         if (item.id === id) {
           const updated = { ...item, [field]: value };
-          if (field === "name" || field === "category") {
-            updated.sku = generateSkuFromName(updated.name, updated.category);
+          if (field === "name" || field === "category" || field === "variant_scent") {
+            updated.sku = generateSkuFromName(updated.name, updated.category, updated.variant_scent);
           }
           return updated;
         }
@@ -150,8 +168,9 @@ export default function ProductsPage() {
 
     const createdProducts: Product[] = newItems.map((item) => ({
       id: `p-${Date.now()}-${Math.random()}`,
-      sku: item.sku || generateSkuFromName(item.name, item.category) || `SKU-${Date.now()}`,
-      name: item.name,
+      sku: item.sku || generateSkuFromName(item.name, item.category, item.variant_scent) || `SKU-${Date.now()}`,
+      name: item.variant_scent && item.variant_scent !== "Standard / Unscented" ? `${item.name} (${item.variant_scent})` : item.name,
+      variant_scent: item.variant_scent || "Standard",
       category: item.category,
       uom: item.uom || "PCS",
       min_reorder_level: 10,
@@ -163,7 +182,6 @@ export default function ProductsPage() {
     const updatedList = [...createdProducts, ...products];
     setProducts(updatedList);
     
-    // Save immediately to persistent localStorage
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedList));
     } catch (err) {
@@ -172,7 +190,6 @@ export default function ProductsPage() {
 
     setIsModalOpen(false);
 
-    // Save to Supabase DB
     try {
       const supabase = createClient();
       for (const p of createdProducts) {
@@ -194,9 +211,10 @@ export default function ProductsPage() {
       {
         id: "item-1",
         name: "",
+        variant_scent: "Standard / Unscented",
         sku: "",
-        category: "raw_material",
-        uom: "Drum",
+        category: "finished_chemical",
+        uom: "Drum (200L)",
         unit_cost: 0,
         selling_price: 0,
       },
@@ -222,7 +240,7 @@ export default function ProductsPage() {
               <Package className="w-6 h-6 text-amber-400" />
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">Product Catalog Master</h1>
             </div>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium">Batch register SKUs, auto-generate codes, unit costs, and selling prices</p>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">Batch register SKUs, scent variants, unit costs, and selling prices</p>
           </div>
         </div>
 
@@ -300,7 +318,7 @@ export default function ProductsPage() {
           <thead>
             <tr className="border-b border-[#1c2541] text-xs text-slate-400 uppercase tracking-wider">
               <th className="py-3 px-3">SKU Code</th>
-              <th className="py-3 px-3">Product Name</th>
+              <th className="py-3 px-3">Product Name & Variant</th>
               <th className="py-3 px-3">Category</th>
               <th className="py-3 px-3">UOM</th>
               <th className="py-3 px-3">Unit Cost (₱)</th>
@@ -322,14 +340,14 @@ export default function ProductsPage() {
         </table>
       </div>
 
-      {/* BATCH MULTI-PRODUCT CREATION MODAL */}
+      {/* BATCH MULTI-PRODUCT CREATION MODAL WITH SCENT VARIANT INPUT */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-[#0b132b] border border-[#1c2541] rounded-2xl w-full max-w-3xl p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
             <div className="flex items-center justify-between border-b border-[#1c2541] pb-3">
               <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
                 <Package className="w-5 h-5 text-amber-400" />
-                <span>Add Products to Catalog (Batch Multi-Item & Auto SKU)</span>
+                <span>Add Products to Catalog (Scent Variants & Explicit Pricing)</span>
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white text-lg">✕</button>
             </div>
@@ -371,7 +389,7 @@ export default function ProductsPage() {
                           <label className="text-slate-200 font-bold block">SKU Code</label>
                           <button
                             type="button"
-                            onClick={() => handleUpdateItem(item.id, "sku", generateSkuFromName(item.name, item.category))}
+                            onClick={() => handleUpdateItem(item.id, "sku", generateSkuFromName(item.name, item.category, item.variant_scent))}
                             className="text-[10px] text-amber-400 hover:underline font-bold flex items-center gap-1"
                           >
                             <Wand2 className="w-3 h-3" /> Auto
@@ -380,7 +398,7 @@ export default function ProductsPage() {
                         <input
                           type="text"
                           required
-                          placeholder="RM-IA9-99"
+                          placeholder="FG-DEGR-LEM-500"
                           value={item.sku}
                           onChange={(e) => handleUpdateItem(item.id, "sku", e.target.value)}
                           className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs font-mono font-bold text-amber-400 focus:border-amber-400"
@@ -394,24 +412,37 @@ export default function ProductsPage() {
                           onChange={(e) => handleUpdateItem(item.id, "category", e.target.value as Product["category"])}
                           className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs text-slate-100 font-semibold"
                         >
-                          <option value="raw_material">Raw Material</option>
                           <option value="finished_chemical">Finished Chemical</option>
+                          <option value="raw_material">Raw Material</option>
                           <option value="packaging">Packaging</option>
                           <option value="pest_control_supply">Pest Control Supply</option>
                         </select>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="text-slate-200 font-bold block mb-1">Product Description / Name</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Isopropyl Alcohol 99%"
-                        value={item.name}
-                        onChange={(e) => handleUpdateItem(item.id, "name", e.target.value)}
-                        className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold focus:border-amber-400"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-slate-200 font-bold block mb-1">Product Description / Name</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Heavy Duty Industrial Degreaser"
+                          value={item.name}
+                          onChange={(e) => handleUpdateItem(item.id, "name", e.target.value)}
+                          className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold focus:border-amber-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-200 font-bold block mb-1">Variant / Scent (Optional)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Lemon Fresh, Lavender, Unscented..."
+                          value={item.variant_scent}
+                          onChange={(e) => handleUpdateItem(item.id, "variant_scent", e.target.value)}
+                          className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-amber-400 font-semibold focus:border-amber-400"
+                        />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
@@ -420,6 +451,7 @@ export default function ProductsPage() {
                         <input
                           type="text"
                           required
+                          placeholder="Drum (200L), Pail (20L)..."
                           value={item.uom}
                           onChange={(e) => handleUpdateItem(item.id, "uom", e.target.value)}
                           className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs font-mono text-slate-100"
@@ -437,7 +469,7 @@ export default function ProductsPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-slate-200 font-bold block mb-1">Selling Price (₱)</label>
+                        <label className="text-slate-200 font-bold block mb-1">Full Selling Price (₱)</label>
                         <input
                           type="number"
                           step="0.01"
