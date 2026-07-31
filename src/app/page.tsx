@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -35,6 +36,7 @@ const navigationCategories = [
     category: "CORE ENGINE",
     items: [
       { name: "Dashboard", icon: LayoutDashboard, badge: null, active: true },
+      { name: "User Security & RBAC", icon: ShieldCheck, badge: "Admin", active: false },
       { name: "Universal Search", icon: Search, badge: "Ctrl+K", active: false },
       { name: "Activity Timeline", icon: Activity, badge: null, active: false },
       { name: "Audit Log", icon: ShieldCheck, badge: "Secured", active: false },
@@ -74,6 +76,7 @@ const navigationCategories = [
 ];
 
 export default function ERPHome() {
+  const router = useRouter();
   const [activeModule, setActiveModule] = useState("Dashboard");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -108,10 +111,25 @@ export default function ERPHome() {
                 {group.items.map((item) => {
                   const Icon = item.icon;
                   const isSelected = activeModule === item.name;
+                  const routeMap: Record<string, string> = {
+                    "Product Catalog": "/products",
+                    "Recipes (BoM)": "/recipes",
+                    "Inventory Ledger": "/inventory",
+                    "Sales Orders": "/sales",
+                    "Pest Control Services": "/pest-control",
+                    "Document Vault": "/documents",
+                    "User Security & RBAC": "/users",
+                  };
+
                   return (
                     <button
                       key={item.name}
-                      onClick={() => setActiveModule(item.name)}
+                      onClick={() => {
+                        setActiveModule(item.name);
+                        if (routeMap[item.name]) {
+                          router.push(routeMap[item.name]);
+                        }
+                      }}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-150 ${
                         isSelected
                           ? "bg-gradient-to-r from-sky-500/20 to-indigo-500/10 text-sky-400 border-l-2 border-sky-400 shadow-sm"

@@ -15,7 +15,6 @@ export default function LoginPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [department, setDepartment] = useState("Production");
-  const [roleCode, setRoleCode] = useState("production_manager");
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -31,7 +30,7 @@ export default function LoginPage() {
       const supabase = createClient();
 
       if (isRegistering) {
-        // REGISTER NEW ACCOUNT (INSTANT ACCESS)
+        // REGISTER NEW EMPLOYEE ACCOUNT (DEFAULT ROLE ASSIGNED BY ADMIN)
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -47,12 +46,11 @@ export default function LoginPage() {
         if (signUpError) {
           setErrorMessage(signUpError.message);
         } else if (authData.user) {
-          // If session wasn't auto-started, attempt instant sign in
           if (!authData.session) {
             await supabase.auth.signInWithPassword({ email, password });
           }
 
-          setSuccessMessage("Account created successfully! Logging into workspace...");
+          setSuccessMessage("Employee account created! Logged in. (Roles are assigned by Administrator).");
           setTimeout(() => {
             router.push("/");
             router.refresh();
@@ -152,7 +150,7 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleAuth} className="space-y-4">
-            {/* ADDITIONAL FIELDS FOR NEW ACCOUNT CREATION */}
+            {/* ADDITIONAL FIELDS FOR NEW EMPLOYEE REGISTRATION */}
             {isRegistering && (
               <>
                 <div className="grid grid-cols-2 gap-3">
@@ -180,38 +178,20 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-300">Department</label>
-                    <select
-                      value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-xl text-xs text-slate-200 focus:border-sky-500"
-                    >
-                      <option value="Production">Chemical Production</option>
-                      <option value="Sales">Sales & Distribution</option>
-                      <option value="Pest Control">Pest Control Services</option>
-                      <option value="Purchasing">Purchasing & Warehouse</option>
-                      <option value="Finance">Finance & Accounting</option>
-                      <option value="Management">Executive Management</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-300">System Role</label>
-                    <select
-                      value={roleCode}
-                      onChange={(e) => setRoleCode(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-xl text-xs text-slate-200 focus:border-sky-500"
-                    >
-                      <option value="production_manager">Production Manager</option>
-                      <option value="sales_rep">Sales Representative</option>
-                      <option value="purchasing_officer">Purchasing Officer</option>
-                      <option value="pest_control_tech">Pest Control Tech</option>
-                      <option value="finance_manager">Finance Manager</option>
-                      <option value="super_admin">Super Administrator</option>
-                    </select>
-                  </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-300">Department</label>
+                  <select
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-xl text-xs text-slate-200 focus:border-sky-500"
+                  >
+                    <option value="Production">Chemical Production</option>
+                    <option value="Sales">Sales & Distribution</option>
+                    <option value="Pest Control">Pest Control Services</option>
+                    <option value="Purchasing">Purchasing & Warehouse</option>
+                    <option value="Finance">Finance & Accounting</option>
+                    <option value="Management">Executive Management</option>
+                  </select>
                 </div>
               </>
             )}
@@ -254,7 +234,7 @@ export default function LoginPage() {
               {loading
                 ? "Processing..."
                 : isRegistering
-                ? "Create Account & Sign In Instantly"
+                ? "Register Employee Account"
                 : "Sign In to ERP"}
               <ArrowRight className="w-4 h-4" />
             </button>
