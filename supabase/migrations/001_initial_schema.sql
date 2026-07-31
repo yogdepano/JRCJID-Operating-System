@@ -3,16 +3,36 @@
 -- MIGRATION 001: INITIAL COMPLETE RELATIONAL SCHEMA & SECURITY
 -- ====================================================================
 
--- 1. EXTENSIONS & ENUMS
+-- 1. EXTENSIONS & SAFE ENUM CREATION
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TYPE customer_type_enum AS ENUM ('chemical_wholesale', 'chemical_retail', 'pest_control_contract');
-CREATE TYPE product_category_enum AS ENUM ('raw_material', 'finished_chemical', 'packaging', 'pest_control_supply');
-CREATE TYPE movement_type_enum AS ENUM ('PURCHASE_RECEIPT', 'PRODUCTION_CONSUMPTION', 'PRODUCTION_YIELD', 'SALES_DISPATCH', 'PEST_CONTROL_CONSUMPTION', 'ADJUSTMENT');
-CREATE TYPE order_status_enum AS ENUM ('DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'IN_PRODUCTION', 'DISPATCHED', 'COMPLETED', 'CANCELLED');
-CREATE TYPE po_status_enum AS ENUM ('DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CANCELLED');
-CREATE TYPE payment_status_enum AS ENUM ('UNPAID', 'PARTIALLY_PAID', 'PAID', 'OVERDUE');
-CREATE TYPE pest_job_status_enum AS ENUM ('SCHEDULED', 'IN_TRANSIT', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED');
+DO $$ BEGIN
+    CREATE TYPE customer_type_enum AS ENUM ('chemical_wholesale', 'chemical_retail', 'pest_control_contract');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE product_category_enum AS ENUM ('raw_material', 'finished_chemical', 'packaging', 'pest_control_supply');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE movement_type_enum AS ENUM ('PURCHASE_RECEIPT', 'PRODUCTION_CONSUMPTION', 'PRODUCTION_YIELD', 'SALES_DISPATCH', 'PEST_CONTROL_CONSUMPTION', 'ADJUSTMENT');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE order_status_enum AS ENUM ('DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'IN_PRODUCTION', 'DISPATCHED', 'COMPLETED', 'CANCELLED');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE po_status_enum AS ENUM ('DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CANCELLED');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE payment_status_enum AS ENUM ('UNPAID', 'PARTIALLY_PAID', 'PAID', 'OVERDUE');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE pest_job_status_enum AS ENUM ('SCHEDULED', 'IN_TRANSIT', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- 2. AUTH & RBAC PROFILES
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -219,14 +239,30 @@ ALTER TABLE public.purchase_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pest_control_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
--- RLS POLICIES
+-- SAFE RLS POLICIES
+DROP POLICY IF EXISTS "Allow authenticated read" ON public.profiles;
 CREATE POLICY "Allow authenticated read" ON public.profiles FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow individual insert profile" ON public.profiles;
 CREATE POLICY "Allow individual insert profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Allow individual update profile" ON public.profiles;
 CREATE POLICY "Allow individual update profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Allow authenticated read products" ON public.products;
 CREATE POLICY "Allow authenticated read products" ON public.products FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated read stock" ON public.inventory_movements;
 CREATE POLICY "Allow authenticated read stock" ON public.inventory_movements FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated read SO" ON public.sales_orders;
 CREATE POLICY "Allow authenticated read SO" ON public.sales_orders FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated read PO" ON public.purchase_orders;
 CREATE POLICY "Allow authenticated read PO" ON public.purchase_orders FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated read PC jobs" ON public.pest_control_jobs;
 CREATE POLICY "Allow authenticated read PC jobs" ON public.pest_control_jobs FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated read audit logs" ON public.audit_logs;
 CREATE POLICY "Allow authenticated read audit logs" ON public.audit_logs FOR SELECT TO authenticated USING (true);
