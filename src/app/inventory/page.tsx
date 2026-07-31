@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Truck, Search, History, CheckCircle2, Package, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
@@ -18,48 +18,24 @@ interface InventoryMovement {
   user: string;
 }
 
-const INITIAL_MOVEMENTS: InventoryMovement[] = [
-  {
-    id: "mov-1",
-    timestamp: "2026-07-31 16:45",
-    sku: "FG-CHEM-500",
-    name: "JRC Heavy Duty Industrial Degreaser",
-    reason: "PRODUCTION_YIELD",
-    batch_lot: "LOT-20260731-01",
-    ref_doc: "PB-2026-005",
-    qty_delta: 500,
-    uom: "L",
-    user: "Production Lead",
-  },
-  {
-    id: "mov-2",
-    timestamp: "2026-07-31 16:40",
-    sku: "RM-CHEM-001",
-    name: "Sodium Hydroxide (Caustic Soda)",
-    reason: "PRODUCTION_CONSUMPTION",
-    batch_lot: "LOT-RAW-8891",
-    ref_doc: "PB-2026-005",
-    qty_delta: -88,
-    uom: "KG",
-    user: "Production Lead",
-  },
-  {
-    id: "mov-3",
-    timestamp: "2026-07-31 14:10",
-    sku: "RM-CHEM-002",
-    name: "Linear Alkylbenzene Sulfonic Acid (LABSA)",
-    reason: "PURCHASE_RECEIPT",
-    batch_lot: "LOT-RAW-9920",
-    ref_doc: "PO-2026-0042",
-    qty_delta: 600,
-    uom: "KG",
-    user: "Warehouse Receiver",
-  },
-];
+const LOCAL_STORAGE_MOVEMENTS_KEY = "jrc_inventory_movements_cache_v1";
 
 export default function InventoryPage() {
-  const [movements] = useState<InventoryMovement[]>(INITIAL_MOVEMENTS);
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(LOCAL_STORAGE_MOVEMENTS_KEY);
+      if (cached) {
+        setMovements(JSON.parse(cached));
+      } else {
+        setMovements([]);
+      }
+    } catch (e) {
+      console.error("Inventory cache error:", e);
+    }
+  }, []);
 
   const filtered = movements.filter(
     (m) =>
@@ -107,50 +83,60 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        {/* MOVEMENTS TABLE */}
-        <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b-2 border-slate-200 text-xs text-slate-500 uppercase tracking-wider font-extrabold">
-                <th className="py-3 px-3">Date / Time</th>
-                <th className="py-3 px-3">Product SKU</th>
-                <th className="py-3 px-3">Description</th>
-                <th className="py-3 px-3">Movement Reason</th>
-                <th className="py-3 px-3">Batch Lot #</th>
-                <th className="py-3 px-3">Ref Doc #</th>
-                <th className="py-3 px-3">Quantity Delta</th>
-                <th className="py-3 px-3">User</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm text-slate-800">
-              {filtered.map((m) => (
-                <tr key={m.id} className="hover:bg-blue-50/50 transition-colors">
-                  <td className="py-3.5 px-3 font-mono text-xs text-slate-600 font-semibold">{m.timestamp}</td>
-                  <td className="py-3.5 px-3 font-mono font-extrabold text-blue-700">{m.sku}</td>
-                  <td className="py-3.5 px-3 font-extrabold text-slate-900">{m.name}</td>
-                  <td className="py-3.5 px-3">
-                    <span className="px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-800 uppercase border border-slate-200">
-                      {m.reason.replace("_", " ")}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-3 font-mono text-xs text-slate-700 font-semibold">{m.batch_lot}</td>
-                  <td className="py-3.5 px-3 font-mono text-xs text-slate-700 font-semibold">{m.ref_doc}</td>
-                  <td className="py-3.5 px-3 font-mono font-extrabold">
-                    <span className={`px-2 py-0.5 rounded text-xs inline-flex items-center gap-1 ${
-                      m.qty_delta > 0
-                        ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                        : "bg-rose-100 text-rose-800 border border-rose-300"
-                    }`}>
-                      {m.qty_delta > 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
-                      {m.qty_delta > 0 ? `+${m.qty_delta}` : m.qty_delta} {m.uom}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-3 text-xs text-slate-600 font-bold">{m.user}</td>
+        {/* MOVEMENTS TABLE OR EMPTY STATE */}
+        {filtered.length === 0 ? (
+          <div className="p-12 text-center bg-white border-2 border-slate-200 rounded-2xl space-y-3 shadow-sm">
+            <Truck className="w-12 h-12 text-slate-400 mx-auto" />
+            <h3 className="text-base font-extrabold text-slate-900">No Stock Movements Logged Yet</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
+              Stock movements automatically record here when sales orders are dispatched or production batches are yielded.
+            </p>
+          </div>
+        ) : (
+          <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b-2 border-slate-200 text-xs text-slate-500 uppercase tracking-wider font-extrabold">
+                  <th className="py-3 px-3">Date / Time</th>
+                  <th className="py-3 px-3">Product SKU</th>
+                  <th className="py-3 px-3">Description</th>
+                  <th className="py-3 px-3">Movement Reason</th>
+                  <th className="py-3 px-3">Batch Lot #</th>
+                  <th className="py-3 px-3">Ref Doc #</th>
+                  <th className="py-3 px-3">Quantity Delta</th>
+                  <th className="py-3 px-3">User</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm text-slate-800">
+                {filtered.map((m) => (
+                  <tr key={m.id} className="hover:bg-blue-50/50 transition-colors">
+                    <td className="py-3.5 px-3 font-mono text-xs text-slate-600 font-semibold">{m.timestamp}</td>
+                    <td className="py-3.5 px-3 font-mono font-extrabold text-blue-700">{m.sku}</td>
+                    <td className="py-3.5 px-3 font-extrabold text-slate-900">{m.name}</td>
+                    <td className="py-3.5 px-3">
+                      <span className="px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-800 uppercase border border-slate-200">
+                        {m.reason.replace("_", " ")}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-3 font-mono text-xs text-slate-700 font-semibold">{m.batch_lot}</td>
+                    <td className="py-3.5 px-3 font-mono text-xs text-slate-700 font-semibold">{m.ref_doc}</td>
+                    <td className="py-3.5 px-3 font-mono font-extrabold">
+                      <span className={`px-2 py-0.5 rounded text-xs inline-flex items-center gap-1 ${
+                        m.qty_delta > 0
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                          : "bg-rose-100 text-rose-800 border border-rose-300"
+                      }`}>
+                        {m.qty_delta > 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+                        {m.qty_delta > 0 ? `+${m.qty_delta}` : m.qty_delta} {m.uom}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-3 text-xs text-slate-600 font-bold">{m.user}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </main>
     </div>
   );
