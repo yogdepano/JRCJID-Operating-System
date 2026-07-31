@@ -21,7 +21,7 @@ import {
 const mainDepartmentNav = [
   { name: "Home", href: "/", icon: LayoutDashboard },
   { name: "Sales", href: "/sales", icon: ShoppingCart },
-  { name: "Finance", href: "/documents", icon: DollarSign },
+  { name: "Finance", href: "/finance", icon: DollarSign },
   { name: "Marketing", href: "/products", icon: Target },
   { name: "Production", href: "/recipes", icon: Factory },
   { name: "Logistics", href: "/inventory", icon: Truck },
@@ -42,7 +42,7 @@ export function TopNavbar() {
   return (
     <header className="sticky top-0 left-0 right-0 z-50 bg-white border-b-2 border-amber-400 shadow-md backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between">
-        {/* BRAND LOGO - ROYAL BLUE & VIBRANT YELLOW */}
+        {/* BRAND LOGO */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 via-blue-600 to-amber-400 p-[2px] shadow-md shadow-blue-500/20">
             <div className="w-full h-full bg-blue-900 rounded-[10px] flex items-center justify-center font-extrabold text-amber-400 text-xs tracking-wider">
@@ -55,7 +55,7 @@ export function TopNavbar() {
           </div>
         </Link>
 
-        {/* STICKY MAIN DEPARTMENT NAVIGATION - LIGHT MODE */}
+        {/* STICKY MAIN DEPARTMENT NAVIGATION */}
         <nav className="flex items-center gap-1 sm:gap-2 overflow-x-auto py-1 px-1 no-scrollbar">
           {mainDepartmentNav.map((dept) => {
             const Icon = dept.icon;
@@ -89,7 +89,7 @@ export function TopNavbar() {
         </div>
       </div>
 
-      {/* SLIDE-OUT OVERLAY FOR SECONDARY MODULES & SECURITY */}
+      {/* SLIDE-OUT OVERLAY FOR SECONDARY MODULES */}
       {isDrawerOpen && (
         <div
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50"

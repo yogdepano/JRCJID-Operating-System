@@ -1,172 +1,157 @@
 "use client";
 
 import React, { useState } from "react";
-import { Boxes, Plus, Search, ArrowLeft, TrendingUp, TrendingDown, Clock, ShieldCheck } from "lucide-react";
+import { Truck, Search, History, CheckCircle2, Package, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { TopNavbar } from "@/components/Navigation/TopNavbar";
 
 interface InventoryMovement {
   id: string;
   timestamp: string;
-  product_sku: string;
-  product_name: string;
-  movement_type: "PURCHASE_RECEIPT" | "PRODUCTION_CONSUMPTION" | "PRODUCTION_YIELD" | "SALES_DISPATCH" | "PEST_CONTROL_CONSUMPTION" | "ADJUSTMENT";
-  quantity: number;
+  sku: string;
+  name: string;
+  reason: "PRODUCTION_YIELD" | "PRODUCTION_CONSUMPTION" | "PURCHASE_RECEIPT" | "PEST_CONTROL_CONSUMPTION" | "SALES_DISPATCH";
+  batch_lot: string;
+  ref_doc: string;
+  qty_delta: number;
   uom: string;
-  batch_number: string;
-  reference_no: string;
-  performed_by: string;
+  user: string;
 }
 
-const mockMovements: InventoryMovement[] = [
+const INITIAL_MOVEMENTS: InventoryMovement[] = [
   {
-    id: "m1",
+    id: "mov-1",
     timestamp: "2026-07-31 16:45",
-    product_sku: "FG-CHEM-500",
-    product_name: "JRC Heavy Duty Industrial Degreaser",
-    movement_type: "PRODUCTION_YIELD",
-    quantity: 500,
+    sku: "FG-CHEM-500",
+    name: "JRC Heavy Duty Industrial Degreaser",
+    reason: "PRODUCTION_YIELD",
+    batch_lot: "LOT-20260731-01",
+    ref_doc: "PB-2026-005",
+    qty_delta: 500,
     uom: "L",
-    batch_number: "LOT-20260731-01",
-    reference_no: "PB-2026-005",
-    performed_by: "Production Lead",
+    user: "Production Lead",
   },
   {
-    id: "m2",
+    id: "mov-2",
     timestamp: "2026-07-31 16:40",
-    product_sku: "RM-CHEM-001",
-    product_name: "Sodium Hydroxide (Caustic Soda)",
-    movement_type: "PRODUCTION_CONSUMPTION",
-    quantity: -80,
+    sku: "RM-CHEM-001",
+    name: "Sodium Hydroxide (Caustic Soda)",
+    reason: "PRODUCTION_CONSUMPTION",
+    batch_lot: "LOT-RAW-8891",
+    ref_doc: "PB-2026-005",
+    qty_delta: -88,
     uom: "KG",
-    batch_number: "LOT-RAW-8891",
-    reference_no: "PB-2026-005",
-    performed_by: "Production Lead",
+    user: "Production Lead",
   },
   {
-    id: "m3",
+    id: "mov-3",
     timestamp: "2026-07-31 14:10",
-    product_sku: "RM-CHEM-002",
-    product_name: "Linear Alkylbenzene Sulfonic Acid (LABSA)",
-    movement_type: "PURCHASE_RECEIPT",
-    quantity: 600,
+    sku: "RM-CHEM-002",
+    name: "Linear Alkylbenzene Sulfonic Acid (LABSA)",
+    reason: "PURCHASE_RECEIPT",
+    batch_lot: "LOT-RAW-9920",
+    ref_doc: "PO-2026-0042",
+    qty_delta: 600,
     uom: "KG",
-    batch_number: "LOT-RAW-9920",
-    reference_no: "PO-2026-0042",
-    performed_by: "Warehouse Receiver",
-  },
-  {
-    id: "m4",
-    timestamp: "2026-07-31 11:20",
-    product_sku: "PC-SUP-012",
-    product_name: "Termiticide Concentrate Premise 200SL",
-    movement_type: "PEST_CONTROL_CONSUMPTION",
-    quantity: -5,
-    uom: "L",
-    batch_number: "LOT-PC-3312",
-    reference_no: "PC-2026-0155",
-    performed_by: "Pest Tech Manila",
+    user: "Warehouse Receiver",
   },
 ];
 
 export default function InventoryPage() {
-  const [movements] = useState<InventoryMovement[]>(mockMovements);
+  const [movements] = useState<InventoryMovement[]>(INITIAL_MOVEMENTS);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredMovements = movements.filter((m) =>
-    m.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.product_sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.reference_no.toLowerCase().includes(searchTerm.toLowerCase())
+  const filtered = movements.filter(
+    (m) =>
+      m.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.batch_lot.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.ref_doc.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 p-6 space-y-6 font-sans">
-      {/* PAGE HEADER */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white">
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-          <div>
-            <div className="flex items-center gap-2">
-              <Boxes className="w-5 h-5 text-emerald-400" />
-              <h1 className="text-xl font-bold tracking-tight text-white">Immutable Stock Movement Ledger</h1>
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+      {/* STICKY TOP NAVIGATION BAR */}
+      <TopNavbar />
+
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+        {/* HEADER - LIGHT MODE */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200">
+              <Truck className="w-7 h-7 text-blue-700" />
             </div>
-            <p className="text-xs text-slate-400">Complete historical audit trail for raw chemicals, finished goods, and batch lots</p>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Logistics Department (Stock Movement Ledger)</h1>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">Complete audit trail for raw chemicals, finished goods, batch lots, and truck dispatches</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-extrabold self-start sm:self-auto">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Ledger Integrity: Verified</span>
           </div>
         </div>
 
-        <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4" />
-          <span>Ledger Integrity: Verified</span>
-        </span>
-      </div>
-
-      {/* SEARCH BAR */}
-      <div className="bg-[#0f172a]/60 p-4 rounded-xl border border-slate-800 flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            placeholder="Search by SKU, Product, Batch Lot, or Reference #..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-          />
+        {/* SEARCH BAR */}
+        <div className="bg-white p-4 rounded-2xl border-2 border-slate-200 shadow-sm">
+          <div className="relative">
+            <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by SKU, Product, Batch Lot, or Ref Doc #..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm text-slate-900 font-medium focus:outline-none focus:border-blue-600"
+            />
+          </div>
         </div>
-      </div>
 
-      {/* INVENTORY MOVEMENTS LEDGER TABLE */}
-      <div className="p-5 rounded-xl bg-[#0f172a]/60 border border-slate-800 overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-slate-800 text-[11px] text-slate-400 uppercase tracking-wider">
-              <th className="py-3 px-3">Date / Time</th>
-              <th className="py-3 px-3">Product SKU</th>
-              <th className="py-3 px-3">Description</th>
-              <th className="py-3 px-3">Movement Reason</th>
-              <th className="py-3 px-3">Batch Lot #</th>
-              <th className="py-3 px-3">Ref Doc #</th>
-              <th className="py-3 px-3">Quantity Delta</th>
-              <th className="py-3 px-3 text-right">User</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800/60 text-xs text-slate-300">
-            {filteredMovements.map((m) => {
-              const isPositive = m.quantity > 0;
-              return (
-                <tr key={m.id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="py-3 px-3 text-slate-400 font-mono text-[11px]">
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-slate-500" />
-                      {m.timestamp}
+        {/* MOVEMENTS TABLE */}
+        <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b-2 border-slate-200 text-xs text-slate-500 uppercase tracking-wider font-extrabold">
+                <th className="py-3 px-3">Date / Time</th>
+                <th className="py-3 px-3">Product SKU</th>
+                <th className="py-3 px-3">Description</th>
+                <th className="py-3 px-3">Movement Reason</th>
+                <th className="py-3 px-3">Batch Lot #</th>
+                <th className="py-3 px-3">Ref Doc #</th>
+                <th className="py-3 px-3">Quantity Delta</th>
+                <th className="py-3 px-3">User</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm text-slate-800">
+              {filtered.map((m) => (
+                <tr key={m.id} className="hover:bg-blue-50/50 transition-colors">
+                  <td className="py-3.5 px-3 font-mono text-xs text-slate-600 font-semibold">{m.timestamp}</td>
+                  <td className="py-3.5 px-3 font-mono font-extrabold text-blue-700">{m.sku}</td>
+                  <td className="py-3.5 px-3 font-extrabold text-slate-900">{m.name}</td>
+                  <td className="py-3.5 px-3">
+                    <span className="px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-800 uppercase border border-slate-200">
+                      {m.reason.replace("_", " ")}
                     </span>
                   </td>
-                  <td className="py-3 px-3 font-mono font-medium text-sky-400">{m.product_sku}</td>
-                  <td className="py-3 px-3 font-semibold text-slate-100">{m.product_name}</td>
-                  <td className="py-3 px-3">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700 uppercase">
-                      {m.movement_type.replace("_", " ")}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 font-mono text-purple-300 font-medium">{m.batch_number}</td>
-                  <td className="py-3 px-3 font-mono text-slate-300">{m.reference_no}</td>
-                  <td className="py-3 px-3 font-mono font-bold">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs ${
-                      isPositive
-                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
-                        : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+                  <td className="py-3.5 px-3 font-mono text-xs text-slate-700 font-semibold">{m.batch_lot}</td>
+                  <td className="py-3.5 px-3 font-mono text-xs text-slate-700 font-semibold">{m.ref_doc}</td>
+                  <td className="py-3.5 px-3 font-mono font-extrabold">
+                    <span className={`px-2 py-0.5 rounded text-xs inline-flex items-center gap-1 ${
+                      m.qty_delta > 0
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                        : "bg-rose-100 text-rose-800 border border-rose-300"
                     }`}>
-                      {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                      {isPositive ? `+${m.quantity}` : m.quantity} {m.uom}
+                      {m.qty_delta > 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+                      {m.qty_delta > 0 ? `+${m.qty_delta}` : m.qty_delta} {m.uom}
                     </span>
                   </td>
-                  <td className="py-3 px-3 text-right font-medium text-slate-400">{m.performed_by}</td>
+                  <td className="py-3.5 px-3 text-xs text-slate-600 font-bold">{m.user}</td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </main>
     </div>
   );
 }
