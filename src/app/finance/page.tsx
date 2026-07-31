@@ -132,27 +132,30 @@ export default function FinancePage() {
           </Link>
         </div>
 
-        {/* FINANCIAL SUMMARY CARDS */}
+        {/* FINANCIAL SUMMARY CARDS WITH SOLID STOPLIGHT ACCENT BARS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm space-y-1 relative overflow-hidden">
-            <div className="w-full h-1.5 bg-gradient-to-r from-blue-600 to-amber-400 absolute top-0 left-0"></div>
+            {/* SOLID STOPLIGHT ORANGE ACCENT - IN PROGRESS AR */}
+            <div className="w-full h-2 bg-orange-500 absolute top-0 left-0"></div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Total Receivables (Gross)</span>
-            <p className="text-2xl sm:text-3xl font-extrabold text-blue-800 font-mono">₱{totalAR.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">₱{totalAR.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
             <span className="text-[11px] text-slate-600 font-semibold block pt-1">Active Accounts Receivable</span>
           </div>
 
           <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm space-y-1 relative overflow-hidden">
-            <div className="w-full h-1.5 bg-gradient-to-r from-amber-400 to-blue-600 absolute top-0 left-0"></div>
+            {/* SOLID STOPLIGHT ORANGE ACCENT - TAX COMPUTATION */}
+            <div className="w-full h-2 bg-orange-500 absolute top-0 left-0"></div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">BIR Output VAT (12%)</span>
-            <p className="text-2xl sm:text-3xl font-extrabold text-amber-600 font-mono">₱{totalVat.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">₱{totalVat.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
             <span className="text-[11px] text-slate-600 font-semibold block pt-1">Philippine BIR Sales Tax</span>
           </div>
 
           <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm space-y-1 relative overflow-hidden">
-            <div className="w-full h-1.5 bg-gradient-to-r from-blue-600 to-emerald-500 absolute top-0 left-0"></div>
+            {/* SOLID STOPLIGHT GREEN ACCENT - SETTLED COLLECTIONS */}
+            <div className="w-full h-2 bg-emerald-500 absolute top-0 left-0"></div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Collection Rate</span>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">{paidCount} of {invoices.length} Invoices</p>
-            <span className="text-[11px] text-slate-600 font-semibold block pt-1">Cash / Credit Settlements</span>
+            <p className="text-2xl sm:text-3xl font-extrabold text-emerald-700 font-mono">{paidCount} of {invoices.length} Invoices</p>
+            <span className="text-[11px] text-slate-600 font-semibold block pt-1">Cash / Credit Settlements Received</span>
           </div>
         </div>
 
@@ -186,7 +189,7 @@ export default function FinancePage() {
           </div>
         </div>
 
-        {/* INVOICE TABLE */}
+        {/* INVOICE TABLE WITH STOPLIGHT BADGES */}
         {filteredInvoices.length === 0 ? (
           <div className="p-12 text-center bg-white border-2 border-slate-200 rounded-2xl space-y-3 shadow-sm">
             <DollarSign className="w-12 h-12 text-slate-400 mx-auto" />
@@ -219,15 +222,17 @@ export default function FinancePage() {
                     <td className="py-3.5 px-3 font-extrabold text-slate-900">{inv.customer_name}</td>
                     <td className="py-3.5 px-3 font-mono font-semibold text-slate-700">{inv.payment_terms}</td>
                     <td className="py-3.5 px-3 font-mono font-semibold">₱{inv.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                    <td className="py-3.5 px-3 font-mono font-semibold text-amber-600">₱{inv.vat_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                    <td className="py-3.5 px-3 font-mono font-extrabold text-blue-900">₱{inv.grand_total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="py-3.5 px-3 font-mono font-semibold text-slate-700">₱{inv.vat_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="py-3.5 px-3 font-mono font-extrabold text-slate-900">₱{inv.grand_total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     <td className="py-3.5 px-3">
                       <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${
                         inv.status === "PAID"
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                          : "bg-amber-100 text-amber-900 border border-amber-300"
+                          ? "bg-emerald-500 text-white"
+                          : inv.status === "OVERDUE"
+                          ? "bg-rose-600 text-white animate-pulse"
+                          : "bg-orange-500 text-white"
                       }`}>
-                        {inv.status}
+                        {inv.status === "PAID" ? "Received (Paid)" : inv.status === "OVERDUE" ? "Delay (Overdue)" : "In Progress"}
                       </span>
                     </td>
                     <td className="py-3.5 px-3">

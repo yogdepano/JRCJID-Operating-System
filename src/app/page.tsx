@@ -76,18 +76,27 @@ export default function ERPHome() {
             </h2>
           </div>
           <span className="self-start sm:self-auto px-3.5 py-1.5 text-xs rounded-full bg-blue-50 text-blue-700 border-2 border-blue-200 font-extrabold flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 border border-amber-500 animate-pulse"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
             Logged in as {currentUserEmail}
           </span>
         </div>
 
-        {/* RESPONSIVE DEPARTMENT CARDS WITH BLUE & YELLOW STREAKS */}
+        {/* STOPLIGHT STATUS LEGEND */}
+        <div className="flex items-center gap-4 bg-white px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600">
+          <span className="uppercase tracking-wider text-[10px] text-slate-400 font-extrabold">Stoplight Status Indicators:</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-500"></span> Green (Received / Settled)</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-orange-500"></span> Orange (In Progress)</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-rose-600"></span> Red (Delay / Overdue / Low Stock)</span>
+        </div>
+
+        {/* RESPONSIVE DEPARTMENT CARDS WITH SOLID STOPLIGHT COLOR ACCENTS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <button
             onClick={() => router.push("/sales")}
             className="p-5 rounded-2xl bg-white border-2 border-slate-200 text-left hover:border-blue-600 hover:shadow-xl transition-all active:scale-[0.98] shadow-md space-y-2 relative overflow-hidden group"
           >
-            <div className="w-full h-1.5 bg-gradient-to-r from-blue-600 via-blue-500 to-amber-400 absolute top-0 left-0"></div>
+            {/* SOLID STOPLIGHT ORANGE ACCENT - IN PROGRESS PIPELINE */}
+            <div className="w-full h-2 bg-orange-500 absolute top-0 left-0"></div>
             <div className="flex items-center justify-between text-slate-600 text-xs font-bold uppercase tracking-wider">
               <span>Sales Department</span>
               <ShoppingCart className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
@@ -102,13 +111,14 @@ export default function ERPHome() {
             onClick={() => router.push("/recipes")}
             className="p-5 rounded-2xl bg-white border-2 border-slate-200 text-left hover:border-blue-600 hover:shadow-xl transition-all active:scale-[0.98] shadow-md space-y-2 relative overflow-hidden group"
           >
-            <div className="w-full h-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-blue-600 absolute top-0 left-0"></div>
+            {/* SOLID STOPLIGHT GREEN ACCENT - FORMULAS COMPLETED */}
+            <div className="w-full h-2 bg-emerald-500 absolute top-0 left-0"></div>
             <div className="flex items-center justify-between text-slate-600 text-xs font-bold uppercase tracking-wider">
               <span>Production Department</span>
-              <Package className="w-5 h-5 text-amber-500 group-hover:scale-110 transition-transform" />
+              <Package className="w-5 h-5 text-emerald-600 group-hover:scale-110 transition-transform" />
             </div>
             <p className="text-3xl font-extrabold text-slate-900">Formulas</p>
-            <span className="text-xs text-amber-600 font-extrabold block pt-1 group-hover:translate-x-1 transition-transform">
+            <span className="text-xs text-emerald-700 font-extrabold block pt-1 group-hover:translate-x-1 transition-transform">
               Chemical BoM Recipes →
             </span>
           </button>
@@ -117,7 +127,8 @@ export default function ERPHome() {
             onClick={() => router.push("/inventory")}
             className="p-5 rounded-2xl bg-white border-2 border-slate-200 text-left hover:border-blue-600 hover:shadow-xl transition-all active:scale-[0.98] shadow-md space-y-2 relative overflow-hidden group"
           >
-            <div className="w-full h-1.5 bg-gradient-to-r from-blue-600 via-blue-500 to-amber-400 absolute top-0 left-0"></div>
+            {/* SOLID STOPLIGHT GREEN ACCENT - STOCK VERIFIED */}
+            <div className="w-full h-2 bg-emerald-500 absolute top-0 left-0"></div>
             <div className="flex items-center justify-between text-slate-600 text-xs font-bold uppercase tracking-wider">
               <span>Logistics Department</span>
               <Boxes className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
@@ -132,13 +143,14 @@ export default function ERPHome() {
             onClick={() => router.push("/users")}
             className="p-5 rounded-2xl bg-white border-2 border-slate-200 text-left hover:border-blue-600 hover:shadow-xl transition-all active:scale-[0.98] shadow-md space-y-2 relative overflow-hidden group"
           >
-            <div className="w-full h-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-blue-600 absolute top-0 left-0"></div>
+            {/* SOLID STOPLIGHT ORANGE ACCENT - RBAC AUTHORIZATIONS */}
+            <div className="w-full h-2 bg-orange-500 absolute top-0 left-0"></div>
             <div className="flex items-center justify-between text-slate-600 text-xs font-bold uppercase tracking-wider">
               <span>Security & RBAC</span>
-              <ShieldCheck className="w-5 h-5 text-amber-500 group-hover:scale-110 transition-transform" />
+              <ShieldCheck className="w-5 h-5 text-orange-500 group-hover:scale-110 transition-transform" />
             </div>
             <p className="text-3xl font-extrabold text-slate-900">Super Admin</p>
-            <span className="text-xs text-amber-600 font-extrabold block pt-1 group-hover:translate-x-1 transition-transform">
+            <span className="text-xs text-orange-700 font-extrabold block pt-1 group-hover:translate-x-1 transition-transform">
               User Permissions →
             </span>
           </button>
