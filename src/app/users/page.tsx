@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Users, ShieldCheck, ArrowLeft, Search, Plus, CheckCircle2, UserX, Trash2, Building2, UserPlus, X } from "lucide-react";
+import { Users, ShieldCheck, ArrowLeft, Search, Plus, CheckCircle2, UserX, UserPlus, X, Building2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -66,7 +66,6 @@ export default function UserManagementPage() {
 
       if (profilesError) throw profilesError;
 
-      // Map profiles and fetch roles
       const formattedUsers: UserProfile[] = (profilesData || []).map((p) => ({
         id: p.id,
         email: p.email,
@@ -74,7 +73,7 @@ export default function UserManagementPage() {
         last_name: p.last_name || "User",
         department: p.department || "General Operations",
         is_active: p.is_active ?? true,
-        roles: [AVAILABLE_ROLES[0]], // Default initial view
+        roles: [AVAILABLE_ROLES[0]],
       }));
 
       setUsers(formattedUsers);
@@ -89,12 +88,10 @@ export default function UserManagementPage() {
     fetchUsers();
   }, []);
 
-  // Update Department for User
   const handleDepartmentChange = (userId: string, newDept: string) => {
     setUsers(users.map((u) => (u.id === userId ? { ...u, department: newDept } : u)));
   };
 
-  // Add Role to User
   const handleAddRoleToUser = (userId: string, roleCode: string) => {
     const roleToAdd = AVAILABLE_ROLES.find((r) => r.code === roleCode);
     if (!roleToAdd) return;
@@ -111,7 +108,6 @@ export default function UserManagementPage() {
     );
   };
 
-  // Remove Role from User
   const handleRemoveRoleFromUser = (userId: string, roleCode: string) => {
     setUsers(
       users.map((u) => {
@@ -123,12 +119,10 @@ export default function UserManagementPage() {
     );
   };
 
-  // Toggle Account Active Status
   const toggleUserStatus = (userId: string) => {
     setUsers(users.map((u) => (u.id === userId ? { ...u, is_active: !u.is_active } : u)));
   };
 
-  // Handle Admin Creating New Employee Account
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -161,7 +155,6 @@ export default function UserManagementPage() {
 
       setUsers([newProfile, ...users]);
       setIsAddUserModalOpen(false);
-      // Reset Form
       setNewEmail("");
       setNewPassword("");
       setNewFirstName("");
@@ -179,7 +172,7 @@ export default function UserManagementPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 p-6 space-y-6 font-sans">
+    <div className="min-h-screen bg-[#090d16] text-slate-100 p-4 sm:p-6 space-y-4 sm:space-y-6 font-sans pb-20 lg:pb-6">
       {/* PAGE HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div className="flex items-center gap-3">
@@ -189,15 +182,15 @@ export default function UserManagementPage() {
           <div>
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-sky-400" />
-              <h1 className="text-xl font-bold tracking-tight text-white">User Security & Multi-Role RBAC</h1>
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white">User Security & Multi-Role RBAC</h1>
             </div>
-            <p className="text-xs text-slate-400">Super Admin command panel for assigning departments and multi-role security permissions</p>
+            <p className="text-xs text-slate-400">Mobile-First Admin Panel for staff permissions and departments</p>
           </div>
         </div>
 
         <button
           onClick={() => setIsAddUserModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-sky-500/20"
+          className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
         >
           <UserPlus className="w-4 h-4" />
           <span>Add New Employee</span>
@@ -205,12 +198,12 @@ export default function UserManagementPage() {
       </div>
 
       {/* SEARCH BAR */}
-      <div className="bg-[#0f172a]/60 p-4 rounded-xl border border-slate-800 flex items-center gap-4">
+      <div className="bg-[#0f172a]/60 p-3 sm:p-4 rounded-xl border border-slate-800 flex items-center gap-4">
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             type="text"
-            placeholder="Search employees by name, email, or department..."
+            placeholder="Search staff by name, email, or department..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-sky-500"
@@ -218,15 +211,83 @@ export default function UserManagementPage() {
         </div>
       </div>
 
-      {/* USERS & ROLES DATA TABLE */}
-      <div className="p-5 rounded-xl bg-[#0f172a]/60 border border-slate-800 overflow-x-auto">
+      {/* MOBILE RESPONSIVE CARDS VIEW (FOR SMALL SCREENS) */}
+      <div className="block lg:hidden space-y-3">
+        {filteredUsers.map((u) => (
+          <div key={u.id} className="p-4 rounded-xl bg-[#0f172a]/90 border border-slate-800 space-y-3 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-sky-500/20 text-sky-400 font-bold flex items-center justify-center text-xs border border-sky-500/30">
+                  {u.first_name.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-100">{u.first_name} {u.last_name}</h3>
+                  <p className="text-[11px] text-slate-400 font-mono truncate">{u.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => toggleUserStatus(u.id)}
+                className={`px-2.5 py-1 rounded text-[10px] font-bold ${
+                  u.is_active ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+                }`}
+              >
+                {u.is_active ? "ACTIVE" : "SUSPENDED"}
+              </button>
+            </div>
+
+            <div className="space-y-1 text-xs">
+              <label className="text-[10px] font-bold text-slate-400 uppercase">Department</label>
+              <select
+                value={u.department}
+                onChange={(e) => handleDepartmentChange(u.id, e.target.value)}
+                className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200"
+              >
+                {ALL_DEPARTMENTS.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase">Assigned Roles</label>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {u.roles.map((r) => (
+                  <span key={r.code} className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-300 border border-sky-500/30 flex items-center gap-1">
+                    {r.name}
+                    {u.roles.length > 1 && (
+                      <button onClick={() => handleRemoveRoleFromUser(u.id, r.code)}><X className="w-3 h-3 text-rose-400" /></button>
+                    )}
+                  </span>
+                ))}
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleAddRoleToUser(u.id, e.target.value);
+                      e.target.value = "";
+                    }
+                  }}
+                  className="px-2 py-0.5 bg-slate-900 border border-dashed border-slate-700 rounded-full text-[10px] text-slate-400"
+                >
+                  <option value="">+ Add Role</option>
+                  {AVAILABLE_ROLES.filter((ar) => !u.roles.some((ur) => ur.code === ar.code)).map((ar) => (
+                    <option key={ar.code} value={ar.code}>{ar.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* DESKTOP DATA TABLE VIEW (FOR LARGE SCREENS) */}
+      <div className="hidden lg:block p-5 rounded-xl bg-[#0f172a]/60 border border-slate-800 overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-slate-800 text-[11px] text-slate-400 uppercase tracking-wider">
               <th className="py-3 px-3">Employee Name</th>
               <th className="py-3 px-3">Work Email</th>
               <th className="py-3 px-3">Department (Editable)</th>
-              <th className="py-3 px-3">Assigned System Roles (Multi-Role Support)</th>
+              <th className="py-3 px-3">Assigned System Roles</th>
               <th className="py-3 px-3">Status</th>
               <th className="py-3 px-3 text-right">Actions</th>
             </tr>
@@ -242,42 +303,28 @@ export default function UserManagementPage() {
                 </td>
                 <td className="py-3 px-3 text-slate-400 font-mono">{u.email}</td>
                 
-                {/* EDITABLE DEPARTMENT SELECTOR */}
                 <td className="py-3 px-3">
                   <select
                     value={u.department}
                     onChange={(e) => handleDepartmentChange(u.id, e.target.value)}
-                    className="p-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 focus:border-sky-500"
+                    className="p-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200"
                   >
                     {ALL_DEPARTMENTS.map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept}
-                      </option>
+                      <option key={dept} value={dept}>{dept}</option>
                     ))}
                   </select>
                 </td>
 
-                {/* MULTI-ROLE BADGES & ADD ROLE BUTTON */}
                 <td className="py-3 px-3">
                   <div className="flex flex-wrap items-center gap-1.5">
                     {u.roles.map((r) => (
-                      <span
-                        key={r.code}
-                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-300 border border-sky-500/30 flex items-center gap-1"
-                      >
+                      <span key={r.code} className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-300 border border-sky-500/30 flex items-center gap-1">
                         {r.name}
                         {u.roles.length > 1 && (
-                          <button
-                            onClick={() => handleRemoveRoleFromUser(u.id, r.code)}
-                            className="hover:text-rose-400 transition-colors"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
+                          <button onClick={() => handleRemoveRoleFromUser(u.id, r.code)}><X className="w-3 h-3 text-rose-400" /></button>
                         )}
                       </span>
                     ))}
-
-                    {/* ADD ROLE DROPDOWN */}
                     <select
                       onChange={(e) => {
                         if (e.target.value) {
@@ -285,38 +332,28 @@ export default function UserManagementPage() {
                           e.target.value = "";
                         }
                       }}
-                      className="px-2 py-0.5 bg-slate-900 border border-dashed border-slate-700 rounded-full text-[10px] text-slate-400 hover:text-sky-400 hover:border-sky-500 focus:outline-none"
+                      className="px-2 py-0.5 bg-slate-900 border border-dashed border-slate-700 rounded-full text-[10px] text-slate-400"
                     >
                       <option value="">+ Add Role</option>
                       {AVAILABLE_ROLES.filter((ar) => !u.roles.some((ur) => ur.code === ar.code)).map((ar) => (
-                        <option key={ar.code} value={ar.code}>
-                          {ar.name}
-                        </option>
+                        <option key={ar.code} value={ar.code}>{ar.name}</option>
                       ))}
                     </select>
                   </div>
                 </td>
 
                 <td className="py-3 px-3">
-                  {u.is_active ? (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center w-max gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> ACTIVE
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center w-max gap-1">
-                      <UserX className="w-3 h-3" /> SUSPENDED
-                    </span>
-                  )}
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                    u.is_active ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+                  }`}>
+                    {u.is_active ? "ACTIVE" : "SUSPENDED"}
+                  </span>
                 </td>
 
                 <td className="py-3 px-3 text-right">
                   <button
                     onClick={() => toggleUserStatus(u.id)}
-                    className={`px-3 py-1 rounded text-[11px] font-semibold transition-colors ${
-                      u.is_active
-                        ? "bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30"
-                        : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                    }`}
+                    className="px-3 py-1 rounded text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200"
                   >
                     {u.is_active ? "Suspend Staff" : "Activate Staff"}
                   </button>
@@ -327,10 +364,10 @@ export default function UserManagementPage() {
         </table>
       </div>
 
-      {/* MODAL FOR CREATING NEW EMPLOYEE */}
+      {/* MOBILE-FIRST MODAL FOR CREATING NEW EMPLOYEE */}
       {isAddUserModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl w-full max-w-md p-5 sm:p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-sky-400" />
@@ -378,7 +415,7 @@ export default function UserManagementPage() {
               </div>
 
               <div>
-                <label className="text-slate-300 font-medium block mb-1">Initial Temporary Password</label>
+                <label className="text-slate-300 font-medium block mb-1">Temporary Password</label>
                 <input
                   type="password"
                   required

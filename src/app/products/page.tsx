@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { Package, Plus, Search, Filter, AlertTriangle, Layers, DollarSign, ArrowLeft } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Package, Plus, Search, Filter, AlertTriangle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 interface Product {
   id: string;
@@ -16,66 +17,8 @@ interface Product {
   selling_price: number;
 }
 
-const mockProducts: Product[] = [
-  {
-    id: "p1",
-    sku: "RM-CHEM-001",
-    name: "Sodium Hydroxide (Caustic Soda Flakes)",
-    category: "raw_material",
-    uom: "KG",
-    min_reorder_level: 200,
-    current_stock: 450,
-    unit_cost: 85.00,
-    selling_price: 0.00,
-  },
-  {
-    id: "p2",
-    sku: "RM-CHEM-002",
-    name: "Linear Alkylbenzene Sulfonic Acid (LABSA)",
-    category: "raw_material",
-    uom: "KG",
-    min_reorder_level: 300,
-    current_stock: 120, // LOW STOCK
-    unit_cost: 140.00,
-    selling_price: 0.00,
-  },
-  {
-    id: "p3",
-    sku: "FG-CHEM-500",
-    name: "JRC Heavy Duty Industrial Degreaser (20L Drum)",
-    category: "finished_chemical",
-    uom: "DRUM",
-    min_reorder_level: 25,
-    current_stock: 68,
-    unit_cost: 1250.00,
-    selling_price: 2450.00,
-  },
-  {
-    id: "p4",
-    sku: "PC-SUP-012",
-    name: "Termiticide Concentrate Premise 200SL",
-    category: "pest_control_supply",
-    uom: "L",
-    min_reorder_level: 15,
-    current_stock: 42,
-    unit_cost: 3200.00,
-    selling_price: 4800.00,
-  },
-  {
-    id: "p5",
-    sku: "PKG-DRUM-20",
-    name: "HDPE Blue Carboy Drum (20 Liter)",
-    category: "packaging",
-    uom: "PCS",
-    min_reorder_level: 100,
-    current_stock: 310,
-    unit_cost: 180.00,
-    selling_price: 0.00,
-  },
-];
-
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -89,7 +32,23 @@ export default function ProductsPage() {
   const [unitCost, setUnitCost] = useState(0);
   const [sellingPrice, setSellingPrice] = useState(0);
 
-  const handleAddProduct = (e: React.FormEvent) => {
+  const fetchProducts = async () => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
+      if (!error && data) {
+        setProducts(data as Product[]);
+      }
+    } catch (err) {
+      console.error("Notice loading products:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     const newProd: Product = {
       id: `p-${Date.now()}`,
@@ -102,9 +61,25 @@ export default function ProductsPage() {
       unit_cost: Number(unitCost),
       selling_price: Number(sellingPrice),
     };
+
     setProducts([newProd, ...products]);
     setIsModalOpen(false);
-    // Reset Form
+
+    try {
+      const supabase = createClient();
+      await supabase.from("products").insert({
+        sku,
+        name,
+        category,
+        uom,
+        min_reorder_level: Number(minReorder),
+        unit_cost: Number(unitCost),
+        selling_price: Number(sellingPrice),
+      });
+    } catch (err) {
+      console.error("Error saving product to Supabase:", err);
+    }
+
     setSku("");
     setName("");
   };
@@ -116,8 +91,8 @@ export default function ProductsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 p-6 space-y-6 font-sans">
-      {/* PAGE HEADER */}
+    <div className="min-h-screen bg-[#090d16] text-slate-100 p-4 sm:p-6 space-y-4 sm:space-y-6 font-sans pb-20 lg:pb-6">
+      {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div className="flex items-center gap-3">
           <Link href="/" className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white">
@@ -126,43 +101,40 @@ export default function ProductsPage() {
           <div>
             <div className="flex items-center gap-2">
               <Package className="w-5 h-5 text-sky-400" />
-              <h1 className="text-xl font-bold tracking-tight text-white">Product Catalog Master</h1>
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white">Product Catalog Master</h1>
             </div>
-            <p className="text-xs text-slate-400">Manage raw chemicals, finished goods, packaging, and pest control supplies</p>
+            <p className="text-xs text-slate-400">Mobile-First Product & Raw Chemical Catalog</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-sky-500/20 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add New Product SKU</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add Product SKU</span>
+        </button>
       </div>
 
-      {/* SEARCH & CATEGORY FILTER RIBBON */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0f172a]/60 p-4 rounded-xl border border-slate-800">
+      {/* SEARCH & FILTERS */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#0f172a]/60 p-3 sm:p-4 rounded-xl border border-slate-800">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             type="text"
-            placeholder="Filter by SKU or Product Name..."
+            placeholder="Search SKU or Name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+            className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-sky-500"
           />
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
-          <Filter className="w-4 h-4 text-slate-500 shrink-0" />
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
           {["ALL", "raw_material", "finished_chemical", "packaging", "pest_control_supply"].map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+              className={`px-3 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors ${
                 selectedCategory === cat
                   ? "bg-sky-500/20 text-sky-400 border border-sky-500/40"
                   : "bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800"
@@ -174,8 +146,43 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* PRODUCTS DATA TABLE */}
-      <div className="p-5 rounded-xl bg-[#0f172a]/60 border border-slate-800/80 overflow-x-auto">
+      {/* MOBILE PRODUCT CARDS (SMALL SCREENS) */}
+      <div className="block lg:hidden space-y-3">
+        {filteredProducts.map((p) => {
+          const isLowStock = (p.current_stock || 0) <= p.min_reorder_level;
+          return (
+            <div key={p.id} className="p-4 rounded-xl bg-[#0f172a]/90 border border-slate-800 space-y-2 shadow-md">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs font-bold text-sky-400">{p.sku}</span>
+                <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-300 uppercase">
+                  {p.category.replace("_", " ")}
+                </span>
+              </div>
+              <h3 className="text-xs font-bold text-white">{p.name}</h3>
+              <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800/60">
+                <div>
+                  <span className="text-[10px] text-slate-500 block">Unit Cost</span>
+                  <span className="font-mono font-bold text-slate-200">₱{p.unit_cost?.toFixed(2) || "0.00"}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 block">Selling Price</span>
+                  <span className="font-mono font-bold text-slate-200">₱{p.selling_price?.toFixed(2) || "0.00"}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {filteredProducts.length === 0 && (
+          <div className="p-8 text-center bg-[#0f172a]/40 border border-slate-800 rounded-xl space-y-2">
+            <Package className="w-8 h-8 text-slate-600 mx-auto" />
+            <p className="text-xs text-slate-400">No product SKUs found. Tap "+ Add Product SKU" to register chemicals.</p>
+          </div>
+        )}
+      </div>
+
+      {/* DESKTOP DATA TABLE (LARGE SCREENS) */}
+      <div className="hidden lg:block p-5 rounded-xl bg-[#0f172a]/60 border border-slate-800 overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-slate-800 text-[11px] text-slate-400 uppercase tracking-wider">
@@ -183,52 +190,29 @@ export default function ProductsPage() {
               <th className="py-3 px-3">Product Name</th>
               <th className="py-3 px-3">Category</th>
               <th className="py-3 px-3">UOM</th>
-              <th className="py-3 px-3">Current Stock</th>
               <th className="py-3 px-3">Unit Cost (₱)</th>
               <th className="py-3 px-3">Selling Price (₱)</th>
-              <th className="py-3 px-3 text-right">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60 text-xs text-slate-300">
-            {filteredProducts.map((p) => {
-              const isLowStock = p.current_stock <= p.min_reorder_level;
-              return (
-                <tr key={p.id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="py-3 px-3 font-mono font-medium text-sky-400">{p.sku}</td>
-                  <td className="py-3 px-3 font-semibold text-slate-100">{p.name}</td>
-                  <td className="py-3 px-3">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700 uppercase">
-                      {p.category.replace("_", " ")}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 font-mono">{p.uom}</td>
-                  <td className="py-3 px-3 font-mono font-bold">
-                    {p.current_stock.toLocaleString()} {p.uom}
-                  </td>
-                  <td className="py-3 px-3 font-mono">₱{p.unit_cost.toFixed(2)}</td>
-                  <td className="py-3 px-3 font-mono">₱{p.selling_price.toFixed(2)}</td>
-                  <td className="py-3 px-3 text-right">
-                    {isLowStock ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30">
-                        <AlertTriangle className="w-3 h-3" /> REORDER REQUIRED
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                        HEALTHY
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
+            {filteredProducts.map((p) => (
+              <tr key={p.id} className="hover:bg-slate-800/40 transition-colors">
+                <td className="py-3 px-3 font-mono font-medium text-sky-400">{p.sku}</td>
+                <td className="py-3 px-3 font-semibold text-slate-100">{p.name}</td>
+                <td className="py-3 px-3 uppercase text-[10px] font-bold text-slate-400">{p.category.replace("_", " ")}</td>
+                <td className="py-3 px-3 font-mono">{p.uom}</td>
+                <td className="py-3 px-3 font-mono">₱{p.unit_cost?.toFixed(2) || "0.00"}</td>
+                <td className="py-3 px-3 font-mono">₱{p.selling_price?.toFixed(2) || "0.00"}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
-      {/* ADD PRODUCT MODAL */}
+      {/* MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <Package className="w-4 h-4 text-sky-400" />
@@ -247,7 +231,7 @@ export default function ProductsPage() {
                     placeholder="RM-CHEM-009"
                     value={sku}
                     onChange={(e) => setSku(e.target.value)}
-                    className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-200 focus:border-sky-500"
+                    className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-200"
                   />
                 </div>
                 <div>
@@ -255,7 +239,7 @@ export default function ProductsPage() {
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as Product["category"])}
-                    className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-200 focus:border-sky-500"
+                    className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-200"
                   >
                     <option value="raw_material">Raw Material</option>
                     <option value="finished_chemical">Finished Chemical</option>
@@ -273,7 +257,7 @@ export default function ProductsPage() {
                   placeholder="e.g. Concentrated Degreaser Solution"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-200 focus:border-sky-500"
+                  className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-200"
                 />
               </div>
 
