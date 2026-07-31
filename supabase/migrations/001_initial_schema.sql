@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS public.inventory_movements (
 CREATE TABLE IF NOT EXISTS public.sales_orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_number TEXT NOT NULL UNIQUE,
-    customer_id UUID NOT NULL REFERENCES public.customers(id),
+    customer_id UUID REFERENCES public.customers(id),
     status order_status_enum NOT NULL DEFAULT 'DRAFT',
     payment_status payment_status_enum NOT NULL DEFAULT 'UNPAID',
     total_amount NUMERIC(15,2) NOT NULL DEFAULT 0.00,
@@ -181,7 +181,7 @@ CREATE TABLE IF NOT EXISTS public.purchase_orders (
 CREATE TABLE IF NOT EXISTS public.pest_control_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_number TEXT NOT NULL UNIQUE,
-    customer_id UUID NOT NULL REFERENCES public.customers(id),
+    customer_id UUID REFERENCES public.customers(id),
     service_address TEXT NOT NULL,
     scheduled_date TIMESTAMPTZ NOT NULL,
     status pest_job_status_enum NOT NULL DEFAULT 'SCHEDULED',
@@ -255,17 +255,16 @@ ALTER TABLE public.purchase_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pest_control_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
--- SAFE RLS POLICIES
+-- SAFE RLS POLICIES FOR PROFILES & ROLES
 DROP POLICY IF EXISTS "Allow authenticated read" ON public.profiles;
 CREATE POLICY "Allow authenticated read" ON public.profiles FOR SELECT TO authenticated USING (true);
 
 DROP POLICY IF EXISTS "Allow individual insert profile" ON public.profiles;
-CREATE POLICY "Allow individual insert profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Allow individual insert profile" ON public.profiles FOR INSERT WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow individual update profile" ON public.profiles;
 CREATE POLICY "Allow individual update profile" ON public.profiles FOR UPDATE USING (true);
 
--- ROLES & USER_ROLES POLICIES FOR ADMIN MANAGEMENT
 DROP POLICY IF EXISTS "Allow authenticated read roles" ON public.roles;
 CREATE POLICY "Allow authenticated read roles" ON public.roles FOR SELECT TO authenticated USING (true);
 
@@ -278,20 +277,42 @@ CREATE POLICY "Allow authenticated insert user_roles" ON public.user_roles FOR I
 DROP POLICY IF EXISTS "Allow authenticated delete user_roles" ON public.user_roles;
 CREATE POLICY "Allow authenticated delete user_roles" ON public.user_roles FOR DELETE TO authenticated USING (true);
 
+-- FULL CRUD RLS POLICIES FOR PRODUCTS (PREVENTS DATA DISAPPEARING)
 DROP POLICY IF EXISTS "Allow authenticated read products" ON public.products;
 CREATE POLICY "Allow authenticated read products" ON public.products FOR SELECT TO authenticated USING (true);
 
-DROP POLICY IF EXISTS "Allow authenticated read stock" ON public.inventory_movements;
-CREATE POLICY "Allow authenticated read stock" ON public.inventory_movements FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Allow authenticated insert products" ON public.products;
+CREATE POLICY "Allow authenticated insert products" ON public.products FOR INSERT TO authenticated WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow authenticated update products" ON public.products;
+CREATE POLICY "Allow authenticated update products" ON public.products FOR UPDATE TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated delete products" ON public.products;
+CREATE POLICY "Allow authenticated delete products" ON public.products FOR DELETE TO authenticated USING (true);
+
+-- FULL CRUD RLS POLICIES FOR SALES ORDERS
 DROP POLICY IF EXISTS "Allow authenticated read SO" ON public.sales_orders;
 CREATE POLICY "Allow authenticated read SO" ON public.sales_orders FOR SELECT TO authenticated USING (true);
 
-DROP POLICY IF EXISTS "Allow authenticated read PO" ON public.purchase_orders;
-CREATE POLICY "Allow authenticated read PO" ON public.purchase_orders FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Allow authenticated insert SO" ON public.sales_orders;
+CREATE POLICY "Allow authenticated insert SO" ON public.sales_orders FOR INSERT TO authenticated WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow authenticated update SO" ON public.sales_orders;
+CREATE POLICY "Allow authenticated update SO" ON public.sales_orders FOR UPDATE TO authenticated USING (true);
+
+-- FULL CRUD RLS POLICIES FOR INVENTORY MOVEMENTS
+DROP POLICY IF EXISTS "Allow authenticated read stock" ON public.inventory_movements;
+CREATE POLICY "Allow authenticated read stock" ON public.inventory_movements FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated insert stock" ON public.inventory_movements;
+CREATE POLICY "Allow authenticated insert stock" ON public.inventory_movements FOR INSERT TO authenticated WITH CHECK (true);
+
+-- FULL CRUD RLS POLICIES FOR PEST CONTROL JOBS
 DROP POLICY IF EXISTS "Allow authenticated read PC jobs" ON public.pest_control_jobs;
 CREATE POLICY "Allow authenticated read PC jobs" ON public.pest_control_jobs FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated insert PC jobs" ON public.pest_control_jobs;
+CREATE POLICY "Allow authenticated insert PC jobs" ON public.pest_control_jobs FOR INSERT TO authenticated WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read audit logs" ON public.audit_logs;
 CREATE POLICY "Allow authenticated read audit logs" ON public.audit_logs FOR SELECT TO authenticated USING (true);

@@ -27,6 +27,8 @@ interface NewProductItem {
   selling_price: number;
 }
 
+const LOCAL_STORAGE_KEY = "jrc_products_cache_v1";
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -47,14 +49,34 @@ export default function ProductsPage() {
   ]);
 
   const fetchProducts = async () => {
+    // 1. Try loading cached local storage products first
+    let cachedList: Product[] = [];
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored) {
+        cachedList = JSON.parse(stored);
+        setProducts(cachedList);
+      }
+    } catch (e) {
+      console.error("Local storage error:", e);
+    }
+
+    // 2. Fetch live data from Supabase
     try {
       const supabase = createClient();
       const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
-      if (!error && data) {
-        setProducts(data as Product[]);
+      if (!error && data && data.length > 0) {
+        const remoteList = data as Product[];
+        // Merge remote and cached without duplicates
+        const combinedMap = new Map<string, Product>();
+        cachedList.forEach((p) => combinedMap.set(p.sku, p));
+        remoteList.forEach((p) => combinedMap.set(p.sku, p));
+        const combined = Array.from(combinedMap.values());
+        setProducts(combined);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(combined));
       }
     } catch (err) {
-      console.error("Notice loading products:", err);
+      console.error("Notice loading products from Supabase:", err);
     }
   };
 
@@ -138,9 +160,19 @@ export default function ProductsPage() {
       selling_price: Number(item.selling_price) || 0,
     }));
 
-    setProducts([...createdProducts, ...products]);
+    const updatedList = [...createdProducts, ...products];
+    setProducts(updatedList);
+    
+    // Save immediately to persistent localStorage
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedList));
+    } catch (err) {
+      console.error("Local storage write error:", err);
+    }
+
     setIsModalOpen(false);
 
+    // Save to Supabase DB
     try {
       const supabase = createClient();
       for (const p of createdProducts) {
