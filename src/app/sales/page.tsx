@@ -1,9 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ShoppingCart, Plus, ArrowLeft, Search, Filter, DollarSign, FileText, CheckCircle2, Clock, Truck, Factory, ShieldAlert, ArrowRight, UploadCloud } from "lucide-react";
+import { ShoppingCart, Plus, ArrowLeft, Search, Trash2, CheckCircle2, Clock, Truck, Factory, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+
+interface OrderLineItem {
+  id: string;
+  product_sku: string;
+  product_name: string;
+  scent: string;
+  scent_addon: number;
+  qty: number;
+  uom: string;
+  unit_price: number;
+  total_price: number;
+}
 
 interface SalesOrder {
   id: string;
@@ -15,8 +27,47 @@ interface SalesOrder {
   status: "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "IN_PRODUCTION" | "DISPATCHED" | "COMPLETED" | "CANCELLED";
   payment_status: "UNPAID" | "PARTIALLY_PAID" | "PAID" | "OVERDUE";
   payment_terms: string;
-  items_summary: string;
+  items: OrderLineItem[];
 }
+
+const AVAILABLE_PRODUCTS = [
+  { sku: "FG-CHEM-500", name: "JRC Heavy Duty Industrial Degreaser", base_price: 2450.00, default_uom: "Pail (20L)" },
+  { sku: "FG-CHEM-501", name: "JRC Commercial Multi-Surface Disinfectant", base_price: 1850.00, default_uom: "Gallon (4L)" },
+  { sku: "FG-CHEM-502", name: "JRC Concentrated Liquid Detergent", base_price: 12500.00, default_uom: "Drum (200L)" },
+  { sku: "PC-SUP-012", name: "Termiticide Concentrate Premise 200SL", base_price: 4800.00, default_uom: "L" },
+  { sku: "RM-CHEM-001", name: "Sodium Hydroxide Caustic Soda Flakes", base_price: 85.00, default_uom: "KG" },
+];
+
+const SCENT_OPTIONS = [
+  { name: "Unscented / Industrial Standard", addon: 0.00 },
+  { name: "Lemon Fresh", addon: 30.00 },
+  { name: "Pine Forest", addon: 35.00 },
+  { name: "Lavender Floral", addon: 50.00 },
+  { name: "Citrus Blast", addon: 40.00 },
+  { name: "Bubblegum Clean", addon: 45.00 },
+];
+
+const UOM_OPTIONS = [
+  "Drum (200L)",
+  "Pail (20L)",
+  "Gallon (4L)",
+  "Bottle (1L)",
+  "L (Liters)",
+  "mL (Milliliters)",
+  "KG (Kilograms)",
+  "Grams",
+  "PCS"
+];
+
+const PAYMENT_TERM_OPTIONS = [
+  "Cash / COD",
+  "NET 7 Days",
+  "NET 15 Days",
+  "NET 30 Days",
+  "NET 45 Days",
+  "NET 60 Days",
+  "NET 90 Days",
+];
 
 export default function SalesPage() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
@@ -24,13 +75,25 @@ export default function SalesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // New Sales Order Form State
+  // Form State
   const [customerName, setCustomerName] = useState("San Miguel Food Group");
   const [clientPoRef, setClientPoRef] = useState("");
-  const [paymentTerms, setPaymentTerms] = useState("NET 30");
-  const [productSku, setProductSku] = useState("FG-CHEM-500");
-  const [productQty, setProductQty] = useState(10);
-  const [unitPrice, setUnitPrice] = useState(2450.00);
+  const [paymentTerms, setPaymentTerms] = useState("NET 30 Days");
+
+  // Multi Line Items State
+  const [lineItems, setLineItems] = useState<OrderLineItem[]>([
+    {
+      id: "item-1",
+      product_sku: "FG-CHEM-500",
+      product_name: "JRC Heavy Duty Industrial Degreaser",
+      scent: "Unscented / Industrial Standard",
+      scent_addon: 0,
+      qty: 10,
+      uom: "Pail (20L)",
+      unit_price: 2450.00,
+      total_price: 24500.00,
+    },
+  ]);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -47,8 +110,8 @@ export default function SalesPage() {
           total_amount: Number(o.total_amount) || 0,
           status: o.status || "APPROVED",
           payment_status: o.payment_status || "UNPAID",
-          payment_terms: o.payment_terms || "NET 30",
-          items_summary: "Industrial Chemical Products",
+          payment_terms: o.payment_terms || "NET 30 Days",
+          items: [],
         }));
         setOrders(formatted);
       }
@@ -63,7 +126,62 @@ export default function SalesPage() {
     fetchOrders();
   }, []);
 
-  const subtotal = productQty * unitPrice;
+  // Multi-item handlers
+  const handleAddLineItem = () => {
+    const defaultProd = AVAILABLE_PRODUCTS[0];
+    const newItem: OrderLineItem = {
+      id: `item-${Date.now()}`,
+      product_sku: defaultProd.sku,
+      product_name: defaultProd.name,
+      scent: "Unscented / Industrial Standard",
+      scent_addon: 0,
+      qty: 1,
+      uom: defaultProd.default_uom,
+      unit_price: defaultProd.base_price,
+      total_price: defaultProd.base_price,
+    };
+    setLineItems([...lineItems, newItem]);
+  };
+
+  const handleRemoveLineItem = (id: string) => {
+    if (lineItems.length === 1) return; // Keep at least 1 item
+    setLineItems(lineItems.filter((item) => item.id !== id));
+  };
+
+  const handleUpdateLineItem = (id: string, field: keyof OrderLineItem, value: any) => {
+    setLineItems(
+      lineItems.map((item) => {
+        if (item.id === id) {
+          const updated = { ...item, [field]: value };
+          
+          if (field === "product_sku") {
+            const prod = AVAILABLE_PRODUCTS.find((p) => p.sku === value);
+            if (prod) {
+              updated.product_name = prod.name;
+              updated.uom = prod.default_uom;
+              updated.unit_price = prod.base_price + updated.scent_addon;
+            }
+          }
+
+          if (field === "scent") {
+            const scentObj = SCENT_OPTIONS.find((s) => s.name === value);
+            const addon = scentObj ? scentObj.addon : 0;
+            updated.scent_addon = addon;
+            const baseProd = AVAILABLE_PRODUCTS.find((p) => p.sku === updated.product_sku);
+            const base = baseProd ? baseProd.base_price : updated.unit_price;
+            updated.unit_price = base + addon;
+          }
+
+          updated.total_price = updated.qty * updated.unit_price;
+          return updated;
+        }
+        return item;
+      })
+    );
+  };
+
+  // Financial Calculations
+  const subtotal = lineItems.reduce((acc, item) => acc + item.total_price, 0);
   const vat = subtotal * 0.12;
   const grandTotal = subtotal + vat;
 
@@ -78,10 +196,10 @@ export default function SalesPage() {
       client_po_ref: clientPoRef || "EMAIL-PO-ATTACHED",
       order_date: new Date().toISOString().split("T")[0],
       total_amount: grandTotal,
-      status: "APPROVED", // Auto-transmits to Production, Warehouse & Finance!
-      payment_status: "UNPAID",
+      status: "APPROVED",
+      payment_status: paymentTerms.startsWith("Cash") ? "PAID" : "UNPAID",
       payment_terms: paymentTerms,
-      items_summary: `${productQty} units (${productSku})`,
+      items: lineItems,
     };
 
     setOrders([newOrder, ...orders]);
@@ -92,7 +210,7 @@ export default function SalesPage() {
       await supabase.from("sales_orders").insert({
         order_number: orderNo,
         status: "APPROVED",
-        payment_status: "UNPAID",
+        payment_status: paymentTerms.startsWith("Cash") ? "PAID" : "UNPAID",
         total_amount: grandTotal,
       });
     } catch (err) {
@@ -121,7 +239,7 @@ export default function SalesPage() {
               <ShoppingCart className="w-6 h-6 text-amber-400" />
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">Sales Orders & Cross-Department Dispatch</h1>
             </div>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium">Log client email POs and instantly transmit orders to Production, Warehouse & Finance</p>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">Log client POs with multiple items, scent variants, custom UOMs, and cash/credit terms up to 90 days</p>
           </div>
         </div>
 
@@ -218,99 +336,169 @@ export default function SalesPage() {
         </table>
       </div>
 
-      {/* CREATE SALES ORDER MODAL (FROM EMAIL PO) */}
+      {/* ADVANCED MULTI-ITEM SALES ORDER MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0b132b] border border-[#1c2541] rounded-2xl w-full max-w-lg p-5 sm:p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#0b132b] border border-[#1c2541] rounded-2xl w-full max-w-3xl p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
             <div className="flex items-center justify-between border-b border-[#1c2541] pb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5 text-amber-400" />
-                <span>Log Sales Order from Client Email PO</span>
+                <span>Log Sales Order (Multi-Item, Scents, Units & Terms)</span>
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white text-lg">✕</button>
             </div>
 
-            <form onSubmit={handleCreateSalesOrder} className="space-y-3.5 text-xs">
-              <div>
-                <label className="text-slate-200 font-bold block mb-1">Customer Account</label>
-                <select
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-sm text-slate-100 font-semibold"
-                >
-                  <option value="San Miguel Food Group">San Miguel Food Group</option>
-                  <option value="Century Pacific Manufacturing">Century Pacific Manufacturing</option>
-                  <option value="Robinsons Supermarket Logistics">Robinsons Supermarket Logistics</option>
-                  <option value="Universal Robina Corporation">Universal Robina Corporation</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleCreateSalesOrder} className="space-y-4 text-xs sm:text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="text-slate-200 font-bold block mb-1">Client Email PO # Reference</label>
+                  <label className="text-slate-200 font-bold block mb-1">Customer Account</label>
+                  <select
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold"
+                  >
+                    <option value="San Miguel Food Group">San Miguel Food Group</option>
+                    <option value="Century Pacific Manufacturing">Century Pacific Manufacturing</option>
+                    <option value="Robinsons Supermarket Logistics">Robinsons Supermarket Logistics</option>
+                    <option value="Universal Robina Corporation">Universal Robina Corporation</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-slate-200 font-bold block mb-1">Client Email PO # Ref</label>
                   <input
                     type="text"
                     required
                     placeholder="PO-SMG-2026-991"
                     value={clientPoRef}
                     onChange={(e) => setClientPoRef(e.target.value)}
-                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-sm text-slate-100 font-mono"
+                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="text-slate-200 font-bold block mb-1">Payment Credit Terms</label>
+                  <label className="text-slate-200 font-bold block mb-1">Payment / Credit Terms</label>
                   <select
                     value={paymentTerms}
                     onChange={(e) => setPaymentTerms(e.target.value)}
-                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-sm text-slate-100"
+                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold"
                   >
-                    <option value="COD">COD (Cash on Delivery)</option>
-                    <option value="NET 15">NET 15 Days</option>
-                    <option value="NET 30">NET 30 Days</option>
-                    <option value="NET 60">NET 60 Days</option>
+                    {PAYMENT_TERM_OPTIONS.map((term) => (
+                      <option key={term} value={term}>{term}</option>
+                    ))}
                   </select>
                 </div>
               </div>
 
-              <div className="border-t border-b border-[#1c2541] py-3 space-y-3">
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">Ordered Products</span>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="col-span-2">
-                    <label className="text-slate-300 block mb-1">Product SKU</label>
-                    <select
-                      value={productSku}
-                      onChange={(e) => setProductSku(e.target.value)}
-                      className="w-full p-2 bg-[#131c35] border border-[#1c2541] rounded-lg text-xs text-slate-100"
-                    >
-                      <option value="FG-CHEM-500">JRC Heavy Duty Industrial Degreaser (20L)</option>
-                      <option value="PC-SUP-012">Termiticide Concentrate Premise 200SL</option>
-                      <option value="RM-CHEM-001">Sodium Hydroxide Caustic Soda Flakes</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-slate-300 block mb-1">Qty</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={productQty}
-                      onChange={(e) => setProductQty(Number(e.target.value))}
-                      className="w-full p-2 bg-[#131c35] border border-[#1c2541] rounded-lg text-xs text-slate-100 font-mono font-bold"
-                    />
-                  </div>
+              {/* MULTI-ITEM ORDERED PRODUCTS SECTION */}
+              <div className="border-t border-b border-[#1c2541] py-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-amber-400 uppercase tracking-wider">
+                    Ordered Line Items ({lineItems.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddLineItem}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-400 hover:bg-amber-400/20 text-xs font-bold transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Add Line Item</span>
+                  </button>
                 </div>
 
-                <div className="p-3 rounded-xl bg-[#131c35] border border-[#1c2541] space-y-1 font-mono text-xs">
-                  <div className="flex justify-between text-slate-400">
-                    <span>Subtotal:</span>
+                <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                  {lineItems.map((item, index) => (
+                    <div key={item.id} className="p-3 sm:p-4 rounded-xl bg-[#131c35] border border-[#1c2541] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-400">Item #{index + 1}</span>
+                        {lineItems.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveLineItem(item.id)}
+                            className="text-rose-400 hover:text-rose-300 p-1"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-slate-300 block mb-1 text-xs">Product SKU</label>
+                          <select
+                            value={item.product_sku}
+                            onChange={(e) => handleUpdateLineItem(item.id, "product_sku", e.target.value)}
+                            className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-slate-100 font-medium"
+                          >
+                            {AVAILABLE_PRODUCTS.map((p) => (
+                              <option key={p.sku} value={p.sku}>{p.name} (Base ₱{p.base_price.toFixed(2)})</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-slate-300 block mb-1 text-xs">Scent / Fragrance Variant</label>
+                          <select
+                            value={item.scent}
+                            onChange={(e) => handleUpdateLineItem(item.id, "scent", e.target.value)}
+                            className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-amber-400 font-semibold"
+                          >
+                            {SCENT_OPTIONS.map((s) => (
+                              <option key={s.name} value={s.name}>
+                                {s.name} {s.addon > 0 ? `(+₱${s.addon.toFixed(2)})` : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-slate-300 block mb-1 text-xs">Quantity</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.qty}
+                            onChange={(e) => handleUpdateLineItem(item.id, "qty", Number(e.target.value))}
+                            className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs font-mono font-bold text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-slate-300 block mb-1 text-xs">Unit of Measure (UOM)</label>
+                          <select
+                            value={item.uom}
+                            onChange={(e) => handleUpdateLineItem(item.id, "uom", e.target.value)}
+                            className="w-full p-2 bg-[#0b132b] border border-[#1c2541] rounded-lg text-xs text-slate-100 font-mono"
+                          >
+                            {UOM_OPTIONS.map((uom) => (
+                              <option key={uom} value={uom}>{uom}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-slate-300 block mb-1 text-xs">Subtotal (₱)</label>
+                          <div className="p-2 bg-[#080e1e] border border-[#1c2541] rounded-lg text-xs font-mono font-bold text-amber-400 text-right">
+                            ₱{item.total_price.toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* FINANCIAL SUMMARY */}
+                <div className="p-4 rounded-xl bg-[#131c35] border border-[#1c2541] space-y-1.5 font-mono text-xs sm:text-sm">
+                  <div className="flex justify-between text-slate-300">
+                    <span>Line Items Subtotal:</span>
                     <span>₱{subtotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-slate-400">
-                    <span>VAT (12%):</span>
+                  <div className="flex justify-between text-slate-300">
+                    <span>VAT (12% Philippine Tax):</span>
                     <span>₱{vat.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-amber-400 font-bold text-sm border-t border-[#1c2541] pt-1">
+                  <div className="flex justify-between text-amber-400 font-extrabold text-base border-t border-[#1c2541] pt-2">
                     <span>Grand Total:</span>
                     <span>₱{grandTotal.toFixed(2)}</span>
                   </div>
@@ -320,7 +508,7 @@ export default function SalesPage() {
               <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs flex items-start gap-2">
                 <ArrowRight className="w-4 h-4 shrink-0 text-purple-400 mt-0.5" />
                 <span>
-                  <strong>Auto Cross-Department Dispatch:</strong> Approving this order automatically reserves warehouse stock, alerts Production for batch scheduling, and opens a BIR Accounts Receivable record in Finance.
+                  <strong>Automated Multi-Item Dispatch:</strong> Transmitting this PO reserves stock for all line items across packaging types (Drums, Pails, Liters), alerts Production for scent formulas, and opens a Finance AR invoice.
                 </span>
               </div>
 
@@ -336,7 +524,7 @@ export default function SalesPage() {
                   type="submit"
                   className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-extrabold shadow-lg shadow-yellow-500/20"
                 >
-                  Transmit Order Across Departments
+                  Transmit Multi-Item Order Across Departments
                 </button>
               </div>
             </form>
