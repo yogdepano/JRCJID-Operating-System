@@ -282,18 +282,20 @@ export default function SalesPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#060b17] text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
-        {/* PAGE HEADER */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c2541] pb-4">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+        {/* PAGE HEADER - LIGHT MODE */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-sm">
           <div className="flex items-center gap-3">
-            <ShoppingCart className="w-7 h-7 text-amber-400" />
+            <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200">
+              <ShoppingCart className="w-7 h-7 text-blue-700" />
+            </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">Sales Department (Order Pipeline)</h1>
-              <p className="text-xs sm:text-sm text-slate-300 font-medium">Log client POs with delivery addresses, dynamic catalog SKUs, and credit terms</p>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Sales Department (Order Pipeline)</h1>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">Log client POs with delivery addresses, dynamic catalog SKUs, and credit terms</p>
             </div>
           </div>
 
@@ -302,15 +304,15 @@ export default function SalesPage() {
               loadProductCatalog();
               setIsModalOpen(true);
             }}
-            className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-yellow-500/20 active:scale-95 transition-all"
+            className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 border-2 border-amber-500 text-slate-950 font-extrabold text-sm shadow-md shadow-yellow-500/20 active:scale-95 transition-all"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-5 h-5 text-slate-950" />
             <span>New Sales Order (From Email PO)</span>
           </button>
         </div>
 
         {/* SEARCH BAR */}
-        <div className="bg-[#0b132b] p-4 rounded-2xl border border-[#1c2541] flex items-center gap-4">
+        <div className="bg-white p-4 rounded-2xl border-2 border-slate-200 flex items-center gap-4 shadow-sm">
           <div className="relative flex-1">
             <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -318,17 +320,17 @@ export default function SalesPage() {
               placeholder="Search Sales Order #, Client PO Ref, Delivery Address, or Customer..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-400"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 font-medium"
             />
           </div>
         </div>
 
-        {/* EMPTY STATE OR MOBILE CARDS VIEW */}
+        {/* EMPTY STATE OR CARDS VIEW */}
         {filteredOrders.length === 0 ? (
-          <div className="p-12 text-center bg-[#0b132b] border border-[#1c2541] rounded-2xl space-y-3">
-            <ShoppingCart className="w-12 h-12 text-slate-600 mx-auto" />
-            <h3 className="text-base font-extrabold text-white">No Sales Orders Logged Yet</h3>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+          <div className="p-12 text-center bg-white border-2 border-slate-200 rounded-2xl space-y-3 shadow-sm">
+            <ShoppingCart className="w-12 h-12 text-slate-400 mx-auto" />
+            <h3 className="text-base font-extrabold text-slate-900">No Sales Orders Logged Yet</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
               Click "+ New Sales Order (From Email PO)" to enter your customer's PO reference, delivery address, and ordered chemical products.
             </p>
           </div>
@@ -337,33 +339,33 @@ export default function SalesPage() {
             {/* MOBILE CARDS VIEW */}
             <div className="block lg:hidden space-y-4">
               {filteredOrders.map((o) => (
-                <div key={o.id} className="p-5 rounded-2xl bg-[#0b132b] border border-[#1c2541] space-y-3 shadow-xl">
+                <div key={o.id} className="p-5 rounded-2xl bg-white border-2 border-slate-200 space-y-3 shadow-md">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-sm font-extrabold text-amber-400">{o.order_number}</span>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                    <span className="font-mono text-sm font-extrabold text-blue-700">{o.order_number}</span>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-purple-50 text-purple-700 border border-purple-200">
                       {o.status}
                     </span>
                   </div>
 
                   <div className="space-y-1">
-                    <h3 className="text-sm font-bold text-white">{o.customer_name}</h3>
-                    <p className="text-xs text-slate-400 font-mono">Client PO Ref: <span className="text-amber-400 font-semibold">{o.client_po_ref}</span></p>
+                    <h3 className="text-sm font-extrabold text-slate-900">{o.customer_name}</h3>
+                    <p className="text-xs text-slate-600 font-mono">Client PO Ref: <span className="text-blue-700 font-bold">{o.client_po_ref}</span></p>
                     {o.delivery_address && (
-                      <p className="text-xs text-slate-300 flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <p className="text-xs text-slate-700 flex items-center gap-1 font-medium">
+                        <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                         <span className="truncate">{o.delivery_address}</span>
                       </p>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[#1c2541]">
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-100">
                     <div>
-                      <span className="text-slate-400 text-[10px] block">Grand Total (inc VAT)</span>
-                      <span className="font-mono font-extrabold text-slate-100 text-sm">₱{o.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="text-slate-500 text-[10px] block font-bold">Grand Total (inc VAT)</span>
+                      <span className="font-mono font-extrabold text-slate-900 text-sm">₱{o.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 text-[10px] block">Payment Terms</span>
-                      <span className="font-mono font-bold text-emerald-400">{o.payment_terms} ({o.payment_status})</span>
+                      <span className="text-slate-500 text-[10px] block font-bold">Payment Terms</span>
+                      <span className="font-mono font-extrabold text-emerald-600">{o.payment_terms} ({o.payment_status})</span>
                     </div>
                   </div>
                 </div>
@@ -371,10 +373,10 @@ export default function SalesPage() {
             </div>
 
             {/* DESKTOP DATA TABLE */}
-            <div className="hidden lg:block p-5 rounded-2xl bg-[#0b132b] border border-[#1c2541] overflow-x-auto">
+            <div className="hidden lg:block p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-[#1c2541] text-xs text-slate-400 uppercase tracking-wider">
+                  <tr className="border-b-2 border-slate-200 text-xs text-slate-500 uppercase tracking-wider font-extrabold">
                     <th className="py-3 px-3">SO Number</th>
                     <th className="py-3 px-3">Customer Account</th>
                     <th className="py-3 px-3">Client Email PO Ref</th>
@@ -385,22 +387,22 @@ export default function SalesPage() {
                     <th className="py-3 px-3">Payment</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#1c2541] text-sm text-slate-200">
+                <tbody className="divide-y divide-slate-100 text-sm text-slate-800">
                   {filteredOrders.map((o) => (
-                    <tr key={o.id} className="hover:bg-[#131c35]/50 transition-colors">
-                      <td className="py-3.5 px-3 font-mono font-extrabold text-amber-400">{o.order_number}</td>
-                      <td className="py-3.5 px-3 font-bold text-slate-100">{o.customer_name}</td>
-                      <td className="py-3.5 px-3 font-mono text-slate-300">{o.client_po_ref}</td>
-                      <td className="py-3.5 px-3 text-slate-300 max-w-[200px] truncate">{o.delivery_address || "—"}</td>
-                      <td className="py-3.5 px-3 font-mono text-slate-300">{o.payment_terms}</td>
-                      <td className="py-3.5 px-3 font-mono font-bold text-white">₱{o.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <tr key={o.id} className="hover:bg-blue-50/50 transition-colors">
+                      <td className="py-3.5 px-3 font-mono font-extrabold text-blue-700">{o.order_number}</td>
+                      <td className="py-3.5 px-3 font-extrabold text-slate-900">{o.customer_name}</td>
+                      <td className="py-3.5 px-3 font-mono text-slate-700 font-semibold">{o.client_po_ref}</td>
+                      <td className="py-3.5 px-3 text-slate-600 max-w-[200px] truncate font-medium">{o.delivery_address || "—"}</td>
+                      <td className="py-3.5 px-3 font-mono text-slate-700 font-semibold">{o.payment_terms}</td>
+                      <td className="py-3.5 px-3 font-mono font-extrabold text-slate-900">₱{o.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                       <td className="py-3.5 px-3">
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-purple-50 text-purple-700 border border-purple-200">
                           {o.status}
                         </span>
                       </td>
                       <td className="py-3.5 px-3">
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400/20 text-amber-400 border border-amber-400/40">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-50 text-amber-800 border border-amber-300">
                           {o.payment_status}
                         </span>
                       </td>
@@ -412,50 +414,50 @@ export default function SalesPage() {
           </>
         )}
 
-        {/* DYNAMIC MULTI-ITEM SALES ORDER MODAL */}
+        {/* DYNAMIC MULTI-ITEM SALES ORDER MODAL - LIGHT MODE */}
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-            <div className="bg-[#0b132b] border border-[#1c2541] rounded-2xl w-full max-w-3xl p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
-              <div className="flex items-center justify-between border-b border-[#1c2541] pb-3">
-                <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5 text-amber-400" />
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <div className="bg-white border-2 border-blue-600 rounded-2xl w-full max-w-3xl p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
+              <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+                <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5 text-blue-700" />
                   <span>Log Sales Order (Multi-Item, Delivery Address & Terms)</span>
                 </h3>
-                <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white text-lg">✕</button>
+                <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-lg font-bold">✕</button>
               </div>
 
               <form onSubmit={handleCreateSalesOrder} className="space-y-4 text-xs sm:text-sm">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="text-slate-200 font-bold block mb-1">Customer Account Name</label>
+                    <label className="text-slate-800 font-extrabold block mb-1">Customer Account Name</label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. Client Company Name"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold focus:border-amber-400"
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-semibold focus:border-blue-600"
                     />
                   </div>
 
                   <div>
-                    <label className="text-slate-200 font-bold block mb-1">Client Email PO # Ref</label>
+                    <label className="text-slate-800 font-extrabold block mb-1">Client Email PO # Ref</label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. PO-2026-CLIENT-001"
                       value={clientPoRef}
                       onChange={(e) => setClientPoRef(e.target.value)}
-                      className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-mono focus:border-amber-400"
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-mono focus:border-blue-600"
                     />
                   </div>
 
                   <div>
-                    <label className="text-slate-200 font-bold block mb-1">Payment / Credit Terms</label>
+                    <label className="text-slate-800 font-extrabold block mb-1">Payment / Credit Terms</label>
                     <select
                       value={paymentTerms}
                       onChange={(e) => setPaymentTerms(e.target.value)}
-                      className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold"
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-semibold"
                     >
                       {PAYMENT_TERM_OPTIONS.map((term) => (
                         <option key={term} value={term}>{term}</option>
@@ -465,8 +467,8 @@ export default function SalesPage() {
                 </div>
 
                 <div>
-                  <label className="text-slate-200 font-bold block mb-1 flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-amber-400" />
+                  <label className="text-slate-800 font-extrabold block mb-1 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-blue-700" />
                     <span>Delivery / Shipping Address</span>
                   </label>
                   <input
@@ -475,46 +477,46 @@ export default function SalesPage() {
                     placeholder="Enter complete delivery address (Plant site, street, city)..."
                     value={deliveryAddress}
                     onChange={(e) => setDeliveryAddress(e.target.value)}
-                    className="w-full p-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold focus:border-amber-400"
+                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-semibold focus:border-blue-600"
                   />
                 </div>
 
-                <div className="border-t border-b border-[#1c2541] py-4 space-y-4">
+                <div className="border-t-2 border-b-2 border-slate-100 py-4 space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-amber-400 uppercase tracking-wider">
+                    <span className="text-xs font-extrabold text-blue-700 uppercase tracking-wider">
                       Ordered Line Items ({lineItems.length})
                     </span>
                     {availableProducts.length > 0 && (
                       <button
                         type="button"
                         onClick={handleAddLineItem}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-400 hover:bg-amber-400/20 text-xs font-bold transition-all"
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-amber-400 border border-amber-500 text-slate-950 hover:bg-amber-300 text-xs font-extrabold transition-all"
                       >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-4 h-4 text-slate-950" />
                         <span>+ Add Line Item</span>
                       </button>
                     )}
                   </div>
 
                   {availableProducts.length === 0 ? (
-                    <div className="p-6 text-center bg-[#131c35] border border-[#1c2541] rounded-xl space-y-2">
-                      <Package className="w-8 h-8 text-slate-500 mx-auto" />
-                      <p className="text-xs text-amber-400 font-bold">No products in catalog yet.</p>
-                      <p className="text-[11px] text-slate-400">
-                        Go to <Link href="/products" className="text-amber-400 underline">Product Catalog Master</Link> to add your chemical products and scent variants first.
+                    <div className="p-6 text-center bg-slate-50 border-2 border-slate-200 rounded-xl space-y-2">
+                      <Package className="w-8 h-8 text-slate-400 mx-auto" />
+                      <p className="text-xs text-blue-700 font-extrabold">No products in catalog yet.</p>
+                      <p className="text-[11px] text-slate-600 font-medium">
+                        Go to <Link href="/products" className="text-blue-700 underline font-bold">Product Catalog Master</Link> to add your chemical products and scent variants first.
                       </p>
                     </div>
                   ) : (
                     <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                       {lineItems.map((item, index) => (
-                        <div key={item.id} className="p-3 sm:p-4 rounded-xl bg-[#131c35] border border-[#1c2541] space-y-3">
+                        <div key={item.id} className="p-3 sm:p-4 rounded-xl bg-slate-50 border-2 border-slate-200 space-y-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-400">Item #{index + 1}</span>
+                            <span className="text-xs font-extrabold text-slate-600">Item #{index + 1}</span>
                             {lineItems.length > 1 && (
                               <button
                                 type="button"
                                 onClick={() => handleRemoveLineItem(item.id)}
-                                className="text-rose-400 hover:text-rose-300 p-1"
+                                className="text-rose-600 hover:text-rose-700 p-1 font-bold"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -522,11 +524,11 @@ export default function SalesPage() {
                           </div>
 
                           <div>
-                            <label className="text-slate-300 block mb-1 text-xs font-bold">Select Product Item & Variant from Catalog</label>
+                            <label className="text-slate-800 block mb-1 text-xs font-extrabold">Select Product Item & Variant from Catalog</label>
                             <select
                               value={item.product_sku}
                               onChange={(e) => handleUpdateLineItem(item.id, "product_sku", e.target.value)}
-                              className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs sm:text-sm text-slate-100 font-semibold"
+                              className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-semibold"
                             >
                               {availableProducts.map((p) => (
                                 <option key={p.sku} value={p.sku}>
@@ -538,22 +540,22 @@ export default function SalesPage() {
 
                           <div className="grid grid-cols-3 gap-3">
                             <div>
-                              <label className="text-slate-300 block mb-1 text-xs">Quantity</label>
+                              <label className="text-slate-700 block mb-1 text-xs font-extrabold">Quantity</label>
                               <input
                                 type="number"
                                 min="1"
                                 value={item.qty}
                                 onChange={(e) => handleUpdateLineItem(item.id, "qty", Number(e.target.value))}
-                                className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs font-mono font-bold text-white"
+                                className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-slate-900"
                               />
                             </div>
 
                             <div>
-                              <label className="text-slate-300 block mb-1 text-xs">Unit of Measure (UOM)</label>
+                              <label className="text-slate-700 block mb-1 text-xs font-extrabold">Unit of Measure (UOM)</label>
                               <select
                                 value={item.uom}
                                 onChange={(e) => handleUpdateLineItem(item.id, "uom", e.target.value)}
-                                className="w-full p-2.5 bg-[#0b132b] border border-[#1c2541] rounded-xl text-xs text-slate-100 font-mono"
+                                className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs text-slate-900 font-mono font-semibold"
                               >
                                 {UOM_OPTIONS.map((uom) => (
                                   <option key={uom} value={uom}>{uom}</option>
@@ -562,8 +564,8 @@ export default function SalesPage() {
                             </div>
 
                             <div>
-                              <label className="text-slate-300 block mb-1 text-xs">Item Subtotal (₱)</label>
-                              <div className="p-2.5 bg-[#080e1e] border border-[#1c2541] rounded-xl text-xs font-mono font-bold text-amber-400 text-right">
+                              <label className="text-slate-700 block mb-1 text-xs font-extrabold">Item Subtotal (₱)</label>
+                              <div className="p-2.5 bg-blue-50 border-2 border-blue-200 rounded-xl text-xs font-mono font-extrabold text-blue-800 text-right">
                                 ₱{item.total_price.toFixed(2)}
                               </div>
                             </div>
@@ -574,16 +576,16 @@ export default function SalesPage() {
                   )}
 
                   {/* FINANCIAL SUMMARY */}
-                  <div className="p-4 rounded-xl bg-[#131c35] border border-[#1c2541] space-y-1.5 font-mono text-xs sm:text-sm">
-                    <div className="flex justify-between text-slate-300">
+                  <div className="p-4 rounded-xl bg-slate-50 border-2 border-slate-200 space-y-1.5 font-mono text-xs sm:text-sm">
+                    <div className="flex justify-between text-slate-700 font-semibold">
                       <span>Line Items Subtotal:</span>
                       <span>₱{subtotal.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-slate-300">
+                    <div className="flex justify-between text-slate-700 font-semibold">
                       <span>VAT (12% Philippine Tax):</span>
                       <span>₱{vat.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-amber-400 font-extrabold text-base border-t border-[#1c2541] pt-2">
+                    <div className="flex justify-between text-blue-800 font-extrabold text-base border-t-2 border-slate-200 pt-2">
                       <span>Grand Total:</span>
                       <span>₱{grandTotal.toFixed(2)}</span>
                     </div>
@@ -594,14 +596,14 @@ export default function SalesPage() {
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2.5 rounded-xl bg-[#131c35] text-slate-300 hover:text-white text-xs font-bold"
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-extrabold"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={availableProducts.length === 0}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-extrabold shadow-lg shadow-yellow-500/20 disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 text-xs font-extrabold shadow-md disabled:opacity-50"
                   >
                     Transmit Order Across Departments
                   </button>

@@ -8,6 +8,9 @@ import {
   Bug,
   ShieldCheck,
   ChevronRight,
+  TrendingUp,
+  Boxes,
+  FileText
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
@@ -55,77 +58,89 @@ export default function ERPHome() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#060b17] text-slate-100 flex flex-col font-sans">
-      {/* STICKY TOP NAVIGATION BAR - ALWAYS ON TOP */}
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+      {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
 
-      {/* MAIN CONTENT WORKSPACE */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1c2541] pb-3">
+      {/* MAIN CONTENT WORKSPACE - LIGHT MODE */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-sm">
           <div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
+            <div className="flex items-center gap-1.5 text-xs text-blue-700 font-extrabold mb-1">
               <span>JRC Industrial OS</span>
-              <ChevronRight className="w-3 h-3 text-slate-600" />
-              <span className="text-amber-400 font-bold">Dashboard</span>
+              <ChevronRight className="w-3.5 h-3.5 text-amber-500" />
+              <span className="text-slate-900">Dashboard</span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
               Operations Command Center
             </h2>
           </div>
-          <span className="self-start sm:self-auto px-3 py-1 text-xs rounded-full bg-amber-400/10 text-amber-400 border border-amber-400/30 font-bold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+          <span className="self-start sm:self-auto px-3.5 py-1.5 text-xs rounded-full bg-blue-50 text-blue-700 border-2 border-blue-200 font-extrabold flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 border border-amber-500 animate-pulse"></span>
             Logged in as {currentUserEmail}
           </span>
         </div>
 
-        {/* RESPONSIVE DEPARTMENT CARDS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* RESPONSIVE DEPARTMENT CARDS WITH BLUE & YELLOW STREAKS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <button
             onClick={() => router.push("/sales")}
-            className="p-5 rounded-2xl bg-[#0b132b] border border-[#1c2541] text-left hover:border-amber-400 transition-all active:scale-[0.98] shadow-lg space-y-2"
+            className="p-5 rounded-2xl bg-white border-2 border-slate-200 text-left hover:border-blue-600 hover:shadow-xl transition-all active:scale-[0.98] shadow-md space-y-2 relative overflow-hidden group"
           >
-            <div className="flex items-center justify-between text-slate-300 text-xs font-bold uppercase tracking-wider">
+            <div className="w-full h-1.5 bg-gradient-to-r from-blue-600 via-blue-500 to-amber-400 absolute top-0 left-0"></div>
+            <div className="flex items-center justify-between text-slate-600 text-xs font-bold uppercase tracking-wider">
               <span>Sales Department</span>
-              <ShoppingCart className="w-5 h-5 text-amber-400" />
+              <ShoppingCart className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
             </div>
-            <p className="text-3xl font-extrabold text-white">{stats.totalSalesOrders} Orders</p>
-            <span className="text-xs text-amber-400 font-bold block pt-1">Open Sales Orders →</span>
+            <p className="text-3xl font-extrabold text-slate-900">{stats.totalSalesOrders} Orders</p>
+            <span className="text-xs text-blue-700 font-extrabold block pt-1 group-hover:translate-x-1 transition-transform">
+              Open Sales Orders →
+            </span>
           </button>
 
           <button
             onClick={() => router.push("/recipes")}
-            className="p-5 rounded-2xl bg-[#0b132b] border border-[#1c2541] text-left hover:border-amber-400 transition-all active:scale-[0.98] shadow-lg space-y-2"
+            className="p-5 rounded-2xl bg-white border-2 border-slate-200 text-left hover:border-blue-600 hover:shadow-xl transition-all active:scale-[0.98] shadow-md space-y-2 relative overflow-hidden group"
           >
-            <div className="flex items-center justify-between text-slate-300 text-xs font-bold uppercase tracking-wider">
+            <div className="w-full h-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-blue-600 absolute top-0 left-0"></div>
+            <div className="flex items-center justify-between text-slate-600 text-xs font-bold uppercase tracking-wider">
               <span>Production Department</span>
-              <Package className="w-5 h-5 text-amber-400" />
+              <Package className="w-5 h-5 text-amber-500 group-hover:scale-110 transition-transform" />
             </div>
-            <p className="text-3xl font-extrabold text-white">Formulas</p>
-            <span className="text-xs text-amber-400 font-bold block pt-1">Chemical BoM Recipes →</span>
+            <p className="text-3xl font-extrabold text-slate-900">Formulas</p>
+            <span className="text-xs text-amber-600 font-extrabold block pt-1 group-hover:translate-x-1 transition-transform">
+              Chemical BoM Recipes →
+            </span>
           </button>
 
           <button
             onClick={() => router.push("/inventory")}
-            className="p-5 rounded-2xl bg-[#0b132b] border border-[#1c2541] text-left hover:border-amber-400 transition-all active:scale-[0.98] shadow-lg space-y-2"
+            className="p-5 rounded-2xl bg-white border-2 border-slate-200 text-left hover:border-blue-600 hover:shadow-xl transition-all active:scale-[0.98] shadow-md space-y-2 relative overflow-hidden group"
           >
-            <div className="flex items-center justify-between text-slate-300 text-xs font-bold uppercase tracking-wider">
+            <div className="w-full h-1.5 bg-gradient-to-r from-blue-600 via-blue-500 to-amber-400 absolute top-0 left-0"></div>
+            <div className="flex items-center justify-between text-slate-600 text-xs font-bold uppercase tracking-wider">
               <span>Logistics Department</span>
-              <Package className="w-5 h-5 text-amber-400" />
+              <Boxes className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
             </div>
-            <p className="text-3xl font-extrabold text-white">{stats.totalProducts} SKUs</p>
-            <span className="text-xs text-amber-400 font-bold block pt-1">Inventory Ledger →</span>
+            <p className="text-3xl font-extrabold text-slate-900">{stats.totalProducts} SKUs</p>
+            <span className="text-xs text-blue-700 font-extrabold block pt-1 group-hover:translate-x-1 transition-transform">
+              Inventory Ledger →
+            </span>
           </button>
 
           <button
             onClick={() => router.push("/users")}
-            className="p-5 rounded-2xl bg-[#0b132b] border border-[#1c2541] text-left hover:border-amber-400 transition-all active:scale-[0.98] shadow-lg space-y-2"
+            className="p-5 rounded-2xl bg-white border-2 border-slate-200 text-left hover:border-blue-600 hover:shadow-xl transition-all active:scale-[0.98] shadow-md space-y-2 relative overflow-hidden group"
           >
-            <div className="flex items-center justify-between text-slate-300 text-xs font-bold uppercase tracking-wider">
+            <div className="w-full h-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-blue-600 absolute top-0 left-0"></div>
+            <div className="flex items-center justify-between text-slate-600 text-xs font-bold uppercase tracking-wider">
               <span>Security & RBAC</span>
-              <ShieldCheck className="w-5 h-5 text-amber-400" />
+              <ShieldCheck className="w-5 h-5 text-amber-500 group-hover:scale-110 transition-transform" />
             </div>
-            <p className="text-3xl font-extrabold text-white">Super Admin</p>
-            <span className="text-xs text-amber-400 font-bold block pt-1">User Permissions →</span>
+            <p className="text-3xl font-extrabold text-slate-900">Super Admin</p>
+            <span className="text-xs text-amber-600 font-extrabold block pt-1 group-hover:translate-x-1 transition-transform">
+              User Permissions →
+            </span>
           </button>
         </div>
       </main>

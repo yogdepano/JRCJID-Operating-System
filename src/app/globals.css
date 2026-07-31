@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: #060b17;
-  --foreground: #f8fafc;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 body {
@@ -12,21 +12,21 @@ body {
   background: var(--background);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   min-height: 100vh;
-  font-size: 15px; /* Larger base font size for mobile readability */
+  font-size: 15px;
 }
 
-/* Custom Gold Scrollbars */
+/* Custom Scrollbars for Light Mode */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b132b;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1c2541;
-  border-radius: 3px;
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #f7b801;
+  background: #2563eb;
 }
