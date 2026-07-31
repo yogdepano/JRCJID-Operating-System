@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Package, Plus, Search, Filter, AlertTriangle, ArrowLeft, Wand2, Trash2 } from "lucide-react";
+import { Package, Plus, Search, Filter, AlertTriangle, ArrowLeft, Wand2, Trash2, Edit, Check } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
@@ -36,7 +36,11 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  
+  // MODAL STATES
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // BATCH MULTI-PRODUCT CREATION STATE
   const [newItems, setNewItems] = useState<NewProductItem[]>([
@@ -69,7 +73,7 @@ export default function ProductsPage() {
       const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
       if (!error && data && data.length > 0) {
         const remoteList = data.map((p: any) => ({
-          id: p.id,
+          id: p.id || `p-${p.sku}`,
           sku: p.sku,
           name: p.name,
           variant_scent: p.variant_scent || "Standard",
@@ -96,6 +100,64 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // DELETE PRODUCT HANDLER
+  const handleDeleteProduct = async (sku: string) => {
+    if (!confirm(`Are you sure you want to delete SKU "${sku}" from the catalog?`)) return;
+
+    const updated = products.filter((p) => p.sku !== sku);
+    setProducts(updated);
+
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.error("Local storage delete error:", e);
+    }
+
+    try {
+      const supabase = createClient();
+      await supabase.from("products").delete().eq("sku", sku);
+    } catch (err) {
+      console.error("Supabase product delete notice:", err);
+    }
+  };
+
+  // EDIT PRODUCT HANDLERS
+  const handleOpenEditModal = (prod: Product) => {
+    setEditingProduct({ ...prod });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEditedProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+
+    const updatedList = products.map((p) => (p.sku === editingProduct.sku ? editingProduct : p));
+    setProducts(updatedList);
+
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedList));
+    } catch (err) {
+      console.error("Local storage edit error:", err);
+    }
+
+    setIsEditModalOpen(false);
+
+    try {
+      const supabase = createClient();
+      await supabase.from("products").update({
+        name: editingProduct.name,
+        category: editingProduct.category,
+        uom: editingProduct.uom,
+        unit_cost: editingProduct.unit_cost,
+        selling_price: editingProduct.selling_price,
+      }).eq("sku", editingProduct.sku);
+    } catch (err) {
+      console.error("Supabase product edit notice:", err);
+    }
+
+    setEditingProduct(null);
+  };
 
   // AUTO SKU GENERATOR LOGIC
   const generateSkuFromName = (productName: string, cat: Product["category"], variant: string) => {
@@ -285,64 +347,205 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {/* MOBILE PRODUCT CARDS */}
-        <div className="block lg:hidden space-y-4">
-          {filteredProducts.map((p) => (
-            <div key={p.id} className="p-5 rounded-2xl bg-white border-2 border-slate-200 space-y-3 shadow-md">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-sm font-extrabold text-blue-700">{p.sku}</span>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-slate-100 text-slate-700 uppercase">
-                  {p.category.replace("_", " ")}
-                </span>
-              </div>
-              <h3 className="text-sm font-extrabold text-slate-900">{p.name}</h3>
-              <div className="grid grid-cols-3 gap-2 text-xs pt-2 border-t border-slate-100">
-                <div>
-                  <span className="text-[10px] text-slate-500 block font-bold">UOM</span>
-                  <span className="font-mono font-bold text-slate-800">{p.uom}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 block font-bold">Unit Cost</span>
-                  <span className="font-mono font-bold text-slate-800">₱{p.unit_cost?.toFixed(2) || "0.00"}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 block font-bold">Selling Price</span>
-                  <span className="font-mono font-extrabold text-blue-700">₱{p.selling_price?.toFixed(2) || "0.00"}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* DESKTOP DATA TABLE */}
-        <div className="hidden lg:block p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b-2 border-slate-200 text-xs text-slate-500 uppercase tracking-wider font-extrabold">
-                <th className="py-3 px-3">SKU Code</th>
-                <th className="py-3 px-3">Product Name & Variant</th>
-                <th className="py-3 px-3">Category</th>
-                <th className="py-3 px-3">UOM</th>
-                <th className="py-3 px-3">Unit Cost (₱)</th>
-                <th className="py-3 px-3">Selling Price (₱)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm text-slate-800">
+        {/* EMPTY STATE OR CARDS VIEW */}
+        {filteredProducts.length === 0 ? (
+          <div className="p-12 text-center bg-white border-2 border-slate-200 rounded-2xl space-y-3 shadow-sm">
+            <Package className="w-12 h-12 text-slate-400 mx-auto" />
+            <h3 className="text-base font-extrabold text-slate-900">No Products in Catalog</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
+              Click "+ Add Products to Catalog" to enter your raw materials, finished chemicals, packaging, and selling prices.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* MOBILE PRODUCT CARDS WITH EDIT & DELETE */}
+            <div className="block lg:hidden space-y-4">
               {filteredProducts.map((p) => (
-                <tr key={p.id} className="hover:bg-blue-50/50 transition-colors">
-                  <td className="py-3.5 px-3 font-mono font-extrabold text-blue-700">{p.sku}</td>
-                  <td className="py-3.5 px-3 font-extrabold text-slate-900">{p.name}</td>
-                  <td className="py-3.5 px-3 uppercase text-xs font-extrabold text-slate-500">{p.category.replace("_", " ")}</td>
-                  <td className="py-3.5 px-3 font-mono font-semibold">{p.uom}</td>
-                  <td className="py-3.5 px-3 font-mono font-semibold">₱{p.unit_cost?.toFixed(2) || "0.00"}</td>
-                  <td className="py-3.5 px-3 font-mono font-extrabold text-blue-800">₱{p.selling_price?.toFixed(2) || "0.00"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                <div key={p.sku} className="p-5 rounded-2xl bg-white border-2 border-slate-200 space-y-3 shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-sm font-extrabold text-blue-700">{p.sku}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleOpenEditModal(p)}
+                        className="p-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProduct(p.sku)}
+                        className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
 
-        {/* BATCH MULTI-PRODUCT CREATION MODAL - LIGHT MODE */}
+                  <h3 className="text-sm font-extrabold text-slate-900">{p.name}</h3>
+
+                  <div className="grid grid-cols-3 gap-2 text-xs pt-2 border-t border-slate-100">
+                    <div>
+                      <span className="text-[10px] text-slate-500 block font-bold">UOM</span>
+                      <span className="font-mono font-bold text-slate-800">{p.uom}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 block font-bold">Unit Cost</span>
+                      <span className="font-mono font-bold text-slate-800">₱{p.unit_cost?.toFixed(2) || "0.00"}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 block font-bold">Selling Price</span>
+                      <span className="font-mono font-extrabold text-blue-700">₱{p.selling_price?.toFixed(2) || "0.00"}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* DESKTOP DATA TABLE WITH EDIT & DELETE */}
+            <div className="hidden lg:block p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-slate-200 text-xs text-slate-500 uppercase tracking-wider font-extrabold">
+                    <th className="py-3 px-3">SKU Code</th>
+                    <th className="py-3 px-3">Product Name & Variant</th>
+                    <th className="py-3 px-3">Category</th>
+                    <th className="py-3 px-3">UOM</th>
+                    <th className="py-3 px-3">Unit Cost (₱)</th>
+                    <th className="py-3 px-3">Selling Price (₱)</th>
+                    <th className="py-3 px-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm text-slate-800">
+                  {filteredProducts.map((p) => (
+                    <tr key={p.sku} className="hover:bg-blue-50/50 transition-colors">
+                      <td className="py-3.5 px-3 font-mono font-extrabold text-blue-700">{p.sku}</td>
+                      <td className="py-3.5 px-3 font-extrabold text-slate-900">{p.name}</td>
+                      <td className="py-3.5 px-3 uppercase text-xs font-extrabold text-slate-500">{p.category.replace("_", " ")}</td>
+                      <td className="py-3.5 px-3 font-mono font-semibold">{p.uom}</td>
+                      <td className="py-3.5 px-3 font-mono font-semibold">₱{p.unit_cost?.toFixed(2) || "0.00"}</td>
+                      <td className="py-3.5 px-3 font-mono font-extrabold text-blue-800">₱{p.selling_price?.toFixed(2) || "0.00"}</td>
+                      <td className="py-3.5 px-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditModal(p)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-extrabold text-xs transition-all"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(p.sku)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 font-extrabold text-xs transition-all"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* EDIT PRODUCT MODAL */}
+        {isEditModalOpen && editingProduct && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <div className="bg-white border-2 border-blue-600 rounded-2xl w-full max-w-lg p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
+              <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+                <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                  <Edit className="w-5 h-5 text-blue-700" />
+                  <span>Edit Product ({editingProduct.sku})</span>
+                </h3>
+                <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-lg font-bold">✕</button>
+              </div>
+
+              <form onSubmit={handleSaveEditedProduct} className="space-y-4 text-xs sm:text-sm">
+                <div>
+                  <label className="text-slate-800 font-extrabold block mb-1">Product Description / Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProduct.name}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-bold focus:border-blue-600"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-slate-800 font-extrabold block mb-1">Category</label>
+                    <select
+                      value={editingProduct.category}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value as Product["category"] })}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs text-slate-900 font-semibold"
+                    >
+                      <option value="finished_chemical">Finished Chemical</option>
+                      <option value="raw_material">Raw Material</option>
+                      <option value="packaging">Packaging</option>
+                      <option value="pest_control_supply">Pest Control Supply</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-800 font-extrabold block mb-1">UOM</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingProduct.uom}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, uom: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono text-slate-900 font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-slate-800 font-extrabold block mb-1">Unit Cost (₱)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={editingProduct.unit_cost}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, unit_cost: Number(e.target.value) })}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-800 font-extrabold block mb-1">Full Selling Price (₱)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={editingProduct.selling_price}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, selling_price: Number(e.target.value) })}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-blue-700"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-extrabold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-600 text-white text-xs font-extrabold shadow-md ring-2 ring-amber-400"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* BATCH MULTI-PRODUCT CREATION MODAL */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
             <div className="bg-white border-2 border-blue-600 rounded-2xl w-full max-w-3xl p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
