@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Lock, Mail, ArrowRight, Sparkles, Building2, UserPlus, UserCheck, Briefcase } from "lucide-react";
+import { Lock, Mail, ArrowRight, Sparkles, Building2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -31,7 +31,7 @@ export default function LoginPage() {
       const supabase = createClient();
 
       if (isRegistering) {
-        // REGISTER NEW ACCOUNT
+        // REGISTER NEW ACCOUNT (INSTANT ACCESS)
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -47,24 +47,16 @@ export default function LoginPage() {
         if (signUpError) {
           setErrorMessage(signUpError.message);
         } else if (authData.user) {
-          // Sync profile details into public.profiles
-          const { error: profileError } = await supabase.from("profiles").insert({
-            id: authData.user.id,
-            email: email,
-            first_name: firstName,
-            last_name: lastName,
-            department: department,
-          });
-
-          if (profileError) {
-            console.error("Profile sync notice:", profileError.message);
+          // If session wasn't auto-started, attempt instant sign in
+          if (!authData.session) {
+            await supabase.auth.signInWithPassword({ email, password });
           }
 
-          setSuccessMessage("Account created successfully! Redirecting to workspace...");
+          setSuccessMessage("Account created successfully! Logging into workspace...");
           setTimeout(() => {
             router.push("/");
             router.refresh();
-          }, 1500);
+          }, 800);
         }
       } else {
         // SIGN IN TO EXISTING ACCOUNT
@@ -262,7 +254,7 @@ export default function LoginPage() {
               {loading
                 ? "Processing..."
                 : isRegistering
-                ? "Create ERP Account"
+                ? "Create Account & Sign In Instantly"
                 : "Sign In to ERP"}
               <ArrowRight className="w-4 h-4" />
             </button>
