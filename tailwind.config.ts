@@ -11,17 +11,18 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        navy: {
-          900: "#0F172A",
-          800: "#1E293B",
-          700: "#334155",
+        cobalt: {
+          950: "#060b17",
+          900: "#0b132b",
+          800: "#131c35",
+          700: "#1c2541",
+          600: "#2a375c",
         },
-        brand: {
-          blue: "#0EA5E9",
-          emerald: "#10B981",
-          amber: "#F59E0B",
-          crimson: "#EF4444",
-          purple: "#8B5CF6",
+        gold: {
+          400: "#FFE066",
+          500: "#F7B801",
+          600: "#EAB308",
+          700: "#CA8A04",
         },
       },
     },

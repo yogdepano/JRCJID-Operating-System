@@ -9,7 +9,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [isRegistering, setIsRegistering] = useState(false);
   
-  // Login & Registration state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -30,7 +29,6 @@ export default function LoginPage() {
       const supabase = createClient();
 
       if (isRegistering) {
-        // REGISTER NEW EMPLOYEE ACCOUNT (DEFAULT ROLE ASSIGNED BY ADMIN)
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -50,14 +48,13 @@ export default function LoginPage() {
             await supabase.auth.signInWithPassword({ email, password });
           }
 
-          setSuccessMessage("Employee account created! Logged in. (Roles are assigned by Administrator).");
+          setSuccessMessage("Employee account created! Logging into workspace...");
           setTimeout(() => {
             router.push("/");
             router.refresh();
           }, 800);
         }
       } else {
-        // SIGN IN TO EXISTING ACCOUNT
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -84,27 +81,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070a12] text-slate-100 flex items-center justify-center p-4 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-[#060b17] text-slate-100 flex items-center justify-center p-4 relative overflow-hidden font-sans">
       {/* BACKGROUND DECORATIVE GLOWS */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-400/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="w-full max-w-md space-y-6 relative z-10">
         {/* BRAND HEADER */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-500 to-emerald-400 p-[2px] shadow-xl shadow-sky-500/20 mb-2">
-            <div className="w-full h-full bg-[#0d1322] rounded-[14px] flex items-center justify-center font-bold text-sky-400 text-xl tracking-wider">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 via-yellow-500 to-amber-600 p-[2px] shadow-xl shadow-yellow-500/20 mb-2">
+            <div className="w-full h-full bg-[#0b132b] rounded-[14px] flex items-center justify-center font-extrabold text-amber-400 text-2xl tracking-wider">
               JRC
             </div>
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-white">JRC Industrial Sales</h1>
-          <p className="text-xs text-slate-400 font-medium">Enterprise Resource Planning & Operational Intelligence</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">JRC Industrial Sales</h1>
+          <p className="text-sm text-slate-300 font-semibold">Enterprise Resource Planning & Operational Intelligence</p>
         </div>
 
         {/* LOGIN / SIGNUP CARD */}
-        <div className="p-6 rounded-2xl bg-[#0f172a]/80 border border-slate-800 backdrop-blur-xl shadow-2xl space-y-5">
-          {/* DUAL MODE TABS (SIGN IN vs CREATE ACCOUNT) */}
-          <div className="grid grid-cols-2 p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold">
+        <div className="p-6 rounded-2xl bg-[#0b132b] border border-[#1c2541] shadow-2xl space-y-5">
+          {/* DUAL MODE TABS */}
+          <div className="grid grid-cols-2 p-1 rounded-xl bg-[#131c35] border border-[#1c2541] text-xs sm:text-sm font-bold">
             <button
               type="button"
               onClick={() => {
@@ -112,10 +109,10 @@ export default function LoginPage() {
                 setErrorMessage("");
                 setSuccessMessage("");
               }}
-              className={`py-2 rounded-lg transition-all ${
+              className={`py-2.5 rounded-lg transition-all ${
                 !isRegistering
-                  ? "bg-sky-500 text-white shadow-md shadow-sky-500/20"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-amber-400 text-slate-950 shadow-md shadow-yellow-500/20"
+                  : "text-slate-300 hover:text-white"
               }`}
             >
               Sign In
@@ -127,10 +124,10 @@ export default function LoginPage() {
                 setErrorMessage("");
                 setSuccessMessage("");
               }}
-              className={`py-2 rounded-lg transition-all ${
+              className={`py-2.5 rounded-lg transition-all ${
                 isRegistering
-                  ? "bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20"
+                  : "text-slate-300 hover:text-white"
               }`}
             >
               Create Account
@@ -138,52 +135,51 @@ export default function LoginPage() {
           </div>
 
           {errorMessage && (
-            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium">
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold">
               {errorMessage}
             </div>
           )}
 
           {successMessage && (
-            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
               {successMessage}
             </div>
           )}
 
           <form onSubmit={handleAuth} className="space-y-4">
-            {/* ADDITIONAL FIELDS FOR NEW EMPLOYEE REGISTRATION */}
             {isRegistering && (
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-300">First Name</label>
+                    <label className="text-xs font-bold text-slate-200">First Name</label>
                     <input
                       type="text"
                       required
                       placeholder="Juan"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-xl text-xs text-slate-200 focus:border-sky-500"
+                      className="w-full px-3.5 py-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-sm text-slate-100 focus:border-amber-400"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-300">Last Name</label>
+                    <label className="text-xs font-bold text-slate-200">Last Name</label>
                     <input
                       type="text"
                       required
                       placeholder="Dela Cruz"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-xl text-xs text-slate-200 focus:border-sky-500"
+                      className="w-full px-3.5 py-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-sm text-slate-100 focus:border-amber-400"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-300">Department</label>
+                  <label className="text-xs font-bold text-slate-200">Department</label>
                   <select
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-xl text-xs text-slate-200 focus:border-sky-500"
+                    className="w-full px-3.5 py-2.5 bg-[#131c35] border border-[#1c2541] rounded-xl text-sm text-slate-100 focus:border-amber-400"
                   >
                     <option value="Production">Chemical Production</option>
                     <option value="Sales">Sales & Distribution</option>
@@ -197,31 +193,31 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-300">Work Email Address</label>
+              <label className="text-xs font-bold text-slate-200">Work Email Address</label>
               <div className="relative">
-                <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Mail className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="email"
                   required
                   placeholder="user@jrcindustrial.ph"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 bg-slate-900/90 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-sky-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-3 bg-[#131c35] border border-[#1c2541] rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-400 transition-colors"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-300">Password</label>
+              <label className="text-xs font-bold text-slate-200">Password</label>
               <div className="relative">
-                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Lock className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="password"
                   required
                   placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 bg-slate-900/90 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-sky-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-3 bg-[#131c35] border border-[#1c2541] rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-400 transition-colors"
                 />
               </div>
             </div>
@@ -229,65 +225,63 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-sky-500 via-indigo-500 to-sky-600 hover:from-sky-400 hover:to-indigo-400 text-white font-semibold text-xs shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-yellow-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
             >
               {loading
                 ? "Processing..."
                 : isRegistering
                 ? "Register Employee Account"
                 : "Sign In to ERP"}
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-5 h-5" />
             </button>
           </form>
 
-          {/* DEMO ROLE QUICK-FILL */}
           {!isRegistering && (
-            <div className="pt-3 border-t border-slate-800 space-y-2">
-              <p className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <div className="pt-3 border-t border-[#1c2541] space-y-2">
+              <p className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4" />
                 <span>Quick Demo Role Fill</span>
               </p>
-              <div className="grid grid-cols-2 gap-2 text-[10px]">
+              <div className="grid grid-cols-2 gap-2 text-xs">
                 <button
                   type="button"
                   onClick={() => handleDemoFill("admin@jrcindustrial.ph")}
-                  className="p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-sky-500 text-left text-slate-300 hover:text-sky-400 transition-colors"
+                  className="p-2.5 rounded-xl bg-[#131c35] border border-[#1c2541] hover:border-amber-400 text-left text-slate-200 hover:text-amber-400 transition-colors"
                 >
                   <span className="font-bold block">Super Admin</span>
-                  <span className="text-slate-500 text-[9px]">Full access</span>
+                  <span className="text-slate-400 text-[10px]">Full access</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDemoFill("production@jrcindustrial.ph")}
-                  className="p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-purple-500 text-left text-slate-300 hover:text-purple-400 transition-colors"
+                  className="p-2.5 rounded-xl bg-[#131c35] border border-[#1c2541] hover:border-amber-400 text-left text-slate-200 hover:text-amber-400 transition-colors"
                 >
                   <span className="font-bold block">Production Manager</span>
-                  <span className="text-slate-500 text-[9px]">Chemical BoM</span>
+                  <span className="text-slate-400 text-[10px]">Chemical BoM</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDemoFill("sales@jrcindustrial.ph")}
-                  className="p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500 text-left text-slate-300 hover:text-emerald-400 transition-colors"
+                  className="p-2.5 rounded-xl bg-[#131c35] border border-[#1c2541] hover:border-amber-400 text-left text-slate-200 hover:text-amber-400 transition-colors"
                 >
                   <span className="font-bold block">Sales Rep</span>
-                  <span className="text-slate-500 text-[9px]">SO & Customers</span>
+                  <span className="text-slate-400 text-[10px]">SO & Customers</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDemoFill("tech@jrcindustrial.ph")}
-                  className="p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-amber-500 text-left text-slate-300 hover:text-amber-400 transition-colors"
+                  className="p-2.5 rounded-xl bg-[#131c35] border border-[#1c2541] hover:border-amber-400 text-left text-slate-200 hover:text-amber-400 transition-colors"
                 >
                   <span className="font-bold block">Pest Control Tech</span>
-                  <span className="text-slate-500 text-[9px]">Field jobs</span>
+                  <span className="text-slate-400 text-[10px]">Field jobs</span>
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* FOOTER METADATA */}
-        <div className="text-center text-[11px] text-slate-500 flex items-center justify-center gap-2">
-          <Building2 className="w-3.5 h-3.5 text-slate-600" />
+        <div className="text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+          <Building2 className="w-4 h-4 text-slate-500" />
           <span>JRC Industrial Sales • Philippine Manufacturing</span>
         </div>
       </div>
