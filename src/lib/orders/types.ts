@@ -32,6 +32,17 @@ export interface OrderLineItem {
   total_price: number;
 }
 
+export interface MaterialRequisitionItem {
+  id: string;
+  material_sku: string;
+  material_name: string;
+  qty_needed: number;
+  uom: string;
+  supplier_name?: string;
+  estimated_unit_cost?: number;
+  total_cost?: number;
+}
+
 export interface UnifiedOrder {
   id: string;
   order_number: string;
@@ -52,6 +63,7 @@ export interface UnifiedOrder {
   last_updated_time: string;
 
   items: OrderLineItem[];
+  requested_materials?: MaterialRequisitionItem[];
   subtotal: number;
   vat_amount: number;
   grand_total: number;

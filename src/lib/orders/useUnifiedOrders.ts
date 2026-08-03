@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UnifiedOrder, Department, OrderStatus, TimelineEvent } from "./types";
+import { UnifiedOrder, Department, OrderStatus, TimelineEvent, MaterialRequisitionItem } from "./types";
 import { createClient } from "@/lib/supabase/client";
 
 const LOCAL_STORAGE_UNIFIED_KEY = "jrc_unified_orders_v2";
@@ -60,7 +60,6 @@ export function useUnifiedOrders() {
   const [orders, setOrders] = useState<UnifiedOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load orders from cache & Supabase
   const loadOrders = async () => {
     setLoading(true);
     let currentOrders: UnifiedOrder[] = [];
@@ -148,7 +147,6 @@ export function useUnifiedOrders() {
     }
   };
 
-  // Create new order
   const createOrder = async (orderData: Partial<UnifiedOrder>, employeeName: string) => {
     const orderNo = orderData.order_number || `PO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const now = new Date();
@@ -206,7 +204,6 @@ export function useUnifiedOrders() {
     return newOrder;
   };
 
-  // Transition order status & responsible department
   const transitionOrder = (
     orderId: string,
     nextStatus: OrderStatus,
@@ -243,7 +240,43 @@ export function useUnifiedOrders() {
     saveOrders(updated);
   };
 
-  // Flexible Department Request (e.g. Production requesting Marketing)
+  const requestMaterials = (
+    orderId: string,
+    materials: MaterialRequisitionItem[],
+    employeeName: string,
+    notes?: string
+  ) => {
+    const now = new Date();
+    const timestampStr = `${now.toISOString().split("T")[0]} ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+
+    const materialSummary = materials.map((m) => `${m.material_name} (${m.qty_needed} ${m.uom})`).join(", ");
+
+    const updated = orders.map((o) => {
+      if (o.id !== orderId && o.order_number !== orderId) return o;
+
+      const newTimelineEvent: TimelineEvent = {
+        id: `timeline-${Date.now()}`,
+        timestamp: timestampStr,
+        employee_name: employeeName,
+        department: "Production",
+        action: "Need Materials (Purchase Approval)",
+        notes: notes || `Requested raw materials from Finance: ${materialSummary}`,
+      };
+
+      return {
+        ...o,
+        requested_materials: materials,
+        current_status: "Waiting for Finance" as OrderStatus,
+        current_department_responsible: "Finance" as Department,
+        last_updated_by: employeeName,
+        last_updated_time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timeline: [newTimelineEvent, ...o.timeline],
+      };
+    });
+
+    saveOrders(updated);
+  };
+
   const requestDepartment = (
     orderId: string,
     targetDepartment: Department,
@@ -260,6 +293,7 @@ export function useUnifiedOrders() {
     loading,
     createOrder,
     transitionOrder,
+    requestMaterials,
     requestDepartment,
     refreshOrders: loadOrders,
   };

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Package, Plus, Search, Wand2, Trash2, Edit } from "lucide-react";
+import { Package, Plus, Search, Wand2, Trash2, Edit, Building2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
@@ -18,6 +18,8 @@ interface Product {
   current_stock: number;
   unit_cost: number;
   selling_price: number;
+  supplier_name?: string;
+  supplier_price?: number;
 }
 
 interface NewProductItem {
@@ -29,9 +31,11 @@ interface NewProductItem {
   uom: string;
   unit_cost: number;
   selling_price: number;
+  supplier_name?: string;
+  supplier_price?: number;
 }
 
-const LOCAL_STORAGE_KEY = "jrc_products_cache_v1";
+const LOCAL_STORAGE_KEY = "jrc_product_catalog_cache_v1";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -54,6 +58,8 @@ export default function ProductsPage() {
       uom: "Drum (200L)",
       unit_cost: 0,
       selling_price: 0,
+      supplier_name: "Metro Chemical Distributors",
+      supplier_price: 0,
     },
   ]);
 
@@ -84,6 +90,8 @@ export default function ProductsPage() {
           current_stock: Number(p.current_stock) || 0,
           unit_cost: Number(p.unit_cost) || 0,
           selling_price: Number(p.selling_price) || 0,
+          supplier_name: p.supplier_name || "Chemical Vendor",
+          supplier_price: Number(p.supplier_price || p.unit_cost) || 0,
         }));
 
         const combinedMap = new Map<string, Product>();
@@ -199,6 +207,8 @@ export default function ProductsPage() {
       uom: "Drum (200L)",
       unit_cost: 0,
       selling_price: 0,
+      supplier_name: "Metro Chemical Distributors",
+      supplier_price: 0,
     };
     setNewItems([...newItems, newItem]);
   };
@@ -237,6 +247,8 @@ export default function ProductsPage() {
       current_stock: 0,
       unit_cost: Number(item.unit_cost) || 0,
       selling_price: Number(item.selling_price) || 0,
+      supplier_name: item.supplier_name || "Chemical Vendor",
+      supplier_price: Number(item.supplier_price || item.unit_cost) || 0,
     }));
 
     const updatedList = [...createdProducts, ...products];
@@ -277,12 +289,17 @@ export default function ProductsPage() {
         uom: "Drum (200L)",
         unit_cost: 0,
         selling_price: 0,
+        supplier_name: "Metro Chemical Distributors",
+        supplier_price: 0,
       },
     ]);
   };
 
   const filteredProducts = products.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.supplier_name && p.supplier_name.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = selectedCategory === "ALL" || p.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -301,7 +318,7 @@ export default function ProductsPage() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Marketing & Product Catalog Master</h1>
-              <p className="text-xs sm:text-sm text-slate-600 font-medium">Fulfill packaging/label requests, batch register SKUs, scent variants, unit costs, and selling prices</p>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">Manage SKUs, supplier items & supplier prices, unit costs, and selling prices (Editable by Finance & Sales)</p>
             </div>
           </div>
 
@@ -323,7 +340,7 @@ export default function ProductsPage() {
             <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search SKU or Name..."
+              placeholder="Search SKU, Name, or Supplier..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm text-slate-900 font-medium focus:outline-none focus:border-blue-600"
@@ -353,7 +370,7 @@ export default function ProductsPage() {
             <Package className="w-12 h-12 text-slate-400 mx-auto" />
             <h3 className="text-base font-extrabold text-slate-900">No Products in Catalog</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
-              Click "+ Add Products to Catalog" to enter raw materials, finished chemicals, packaging, and selling prices.
+              Click "+ Add Products to Catalog" to enter raw materials, finished chemicals, supplier items, and selling prices.
             </p>
           </div>
         ) : (
@@ -380,7 +397,10 @@ export default function ProductsPage() {
                     </div>
                   </div>
 
-                  <h3 className="text-sm font-extrabold text-slate-900">{p.name}</h3>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900">{p.name}</h3>
+                    <p className="text-xs text-slate-500 font-medium">Supplier: <strong className="text-slate-800">{p.supplier_name || "Chemical Vendor"}</strong></p>
+                  </div>
 
                   <div className="grid grid-cols-3 gap-2 text-xs pt-2 border-t border-slate-100">
                     <div>
@@ -388,8 +408,8 @@ export default function ProductsPage() {
                       <span className="font-mono font-bold text-slate-800">{p.uom}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 block font-bold">Unit Cost</span>
-                      <span className="font-mono font-bold text-slate-800">₱{p.unit_cost?.toFixed(2) || "0.00"}</span>
+                      <span className="text-[10px] text-slate-500 block font-bold">Supplier Price</span>
+                      <span className="font-mono font-bold text-amber-700">₱{p.supplier_price?.toFixed(2) || p.unit_cost?.toFixed(2) || "0.00"}</span>
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-500 block font-bold">Selling Price</span>
@@ -400,16 +420,17 @@ export default function ProductsPage() {
               ))}
             </div>
 
-            {/* DESKTOP DATA TABLE */}
+            {/* DESKTOP DATA TABLE WITH EDIT & DELETE */}
             <div className="hidden lg:block p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b-2 border-slate-200 text-xs text-slate-500 uppercase tracking-wider font-extrabold">
                     <th className="py-3 px-3">SKU Code</th>
-                    <th className="py-3 px-3">Product Name & Variant</th>
+                    <th className="py-3 px-3">Product Description</th>
+                    <th className="py-3 px-3">Supplier Name</th>
                     <th className="py-3 px-3">Category</th>
                     <th className="py-3 px-3">UOM</th>
-                    <th className="py-3 px-3">Unit Cost (₱)</th>
+                    <th className="py-3 px-3">Supplier Price (₱)</th>
                     <th className="py-3 px-3">Selling Price (₱)</th>
                     <th className="py-3 px-3">Actions</th>
                   </tr>
@@ -419,9 +440,10 @@ export default function ProductsPage() {
                     <tr key={p.sku} className="hover:bg-blue-50/50 transition-colors">
                       <td className="py-3.5 px-3 font-mono font-extrabold text-blue-700">{p.sku}</td>
                       <td className="py-3.5 px-3 font-extrabold text-slate-900">{p.name}</td>
+                      <td className="py-3.5 px-3 font-semibold text-slate-700">{p.supplier_name || "Chemical Vendor"}</td>
                       <td className="py-3.5 px-3 uppercase text-xs font-extrabold text-slate-500">{p.category.replace("_", " ")}</td>
                       <td className="py-3.5 px-3 font-mono font-semibold">{p.uom}</td>
-                      <td className="py-3.5 px-3 font-mono font-semibold">₱{p.unit_cost?.toFixed(2) || "0.00"}</td>
+                      <td className="py-3.5 px-3 font-mono font-bold text-amber-700">₱{p.supplier_price?.toFixed(2) || p.unit_cost?.toFixed(2) || "0.00"}</td>
                       <td className="py-3.5 px-3 font-mono font-extrabold text-blue-800">₱{p.selling_price?.toFixed(2) || "0.00"}</td>
                       <td className="py-3.5 px-3">
                         <div className="flex items-center gap-2">
@@ -430,7 +452,7 @@ export default function ProductsPage() {
                             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-extrabold text-xs transition-all"
                           >
                             <Edit className="w-3.5 h-3.5" />
-                            <span>Edit</span>
+                            <span>Edit Prices</span>
                           </button>
                           <button
                             onClick={() => handleDeleteProduct(p.sku)}
@@ -449,14 +471,14 @@ export default function ProductsPage() {
           </>
         )}
 
-        {/* EDIT PRODUCT MODAL */}
+        {/* EDIT PRODUCT MODAL (EDITABLE BY FINANCE & SALES) */}
         {isEditModalOpen && editingProduct && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
             <div className="bg-white border-2 border-blue-600 rounded-2xl w-full max-w-lg p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
               <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
                   <Edit className="w-5 h-5 text-blue-700" />
-                  <span>Edit Product ({editingProduct.sku})</span>
+                  <span>Edit Product & Supplier Prices ({editingProduct.sku})</span>
                 </h3>
                 <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-lg font-bold">✕</button>
               </div>
@@ -475,17 +497,14 @@ export default function ProductsPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Category</label>
-                    <select
-                      value={editingProduct.category}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value as Product["category"] })}
+                    <label className="text-slate-800 font-extrabold block mb-1">Supplier Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Metro Chemical Supplies"
+                      value={editingProduct.supplier_name || ""}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, supplier_name: e.target.value })}
                       className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs text-slate-900 font-semibold"
-                    >
-                      <option value="finished_chemical">Finished Chemical</option>
-                      <option value="raw_material">Raw Material</option>
-                      <option value="packaging">Packaging</option>
-                      <option value="pest_control_supply">Pest Control Supply</option>
-                    </select>
+                    />
                   </div>
 
                   <div>
@@ -502,14 +521,20 @@ export default function ProductsPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Unit Cost (₱)</label>
+                    <label className="text-slate-800 font-extrabold block mb-1">Current Supplier Price (₱)</label>
                     <input
                       type="number"
                       step="0.01"
                       required
-                      value={editingProduct.unit_cost}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, unit_cost: Number(e.target.value) })}
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-slate-900"
+                      value={editingProduct.supplier_price || editingProduct.unit_cost}
+                      onChange={(e) =>
+                        setEditingProduct({
+                          ...editingProduct,
+                          supplier_price: Number(e.target.value),
+                          unit_cost: Number(e.target.value),
+                        })
+                      }
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-amber-700"
                     />
                   </div>
                   <div>
@@ -537,7 +562,7 @@ export default function ProductsPage() {
                     type="submit"
                     className="px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-600 text-white text-xs font-extrabold shadow-md ring-2 ring-amber-400"
                   >
-                    Save Changes
+                    Save Supplier & Price Changes
                   </button>
                 </div>
               </form>
@@ -552,7 +577,7 @@ export default function ProductsPage() {
               <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
                   <Package className="w-5 h-5 text-blue-700" />
-                  <span>Add Products to Catalog (Scent Variants & Explicit Pricing)</span>
+                  <span>Add Products to Catalog (Supplier Items & Current Prices)</span>
                 </h3>
                 <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-lg font-bold">✕</button>
               </div>
@@ -639,13 +664,13 @@ export default function ProductsPage() {
                         </div>
 
                         <div>
-                          <label className="text-slate-800 font-extrabold block mb-1">Variant / Scent (Optional)</label>
+                          <label className="text-slate-800 font-extrabold block mb-1">Supplier Name</label>
                           <input
                             type="text"
-                            placeholder="e.g. Lemon Fresh, Lavender, Unscented..."
-                            value={item.variant_scent}
-                            onChange={(e) => handleUpdateItem(item.id, "variant_scent", e.target.value)}
-                            className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-blue-700 font-semibold focus:border-blue-600"
+                            placeholder="e.g. Metro Chemical Distributors"
+                            value={item.supplier_name || ""}
+                            onChange={(e) => handleUpdateItem(item.id, "supplier_name", e.target.value)}
+                            className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs text-slate-900 font-semibold"
                           />
                         </div>
                       </div>
@@ -663,14 +688,17 @@ export default function ProductsPage() {
                           />
                         </div>
                         <div>
-                          <label className="text-slate-800 font-extrabold block mb-1">Unit Cost (₱)</label>
+                          <label className="text-slate-800 font-extrabold block mb-1">Supplier Price (₱)</label>
                           <input
                             type="number"
                             step="0.01"
                             required
-                            value={item.unit_cost}
-                            onChange={(e) => handleUpdateItem(item.id, "unit_cost", Number(e.target.value))}
-                            className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-slate-900"
+                            value={item.supplier_price || item.unit_cost}
+                            onChange={(e) => {
+                              handleUpdateItem(item.id, "supplier_price", Number(e.target.value));
+                              handleUpdateItem(item.id, "unit_cost", Number(e.target.value));
+                            }}
+                            className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-amber-700"
                           />
                         </div>
                         <div>

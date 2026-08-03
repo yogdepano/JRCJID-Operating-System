@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { UnifiedOrder, Department, OrderStatus } from "@/lib/orders/types";
+import React, { useState, useEffect } from "react";
+import { UnifiedOrder, Department, OrderStatus, MaterialRequisitionItem } from "@/lib/orders/types";
 import { useUnifiedOrders } from "@/lib/orders/useUnifiedOrders";
 import { OrderTimelineDrawer } from "@/components/Orders/OrderTimelineDrawer";
 import {
@@ -13,13 +13,16 @@ import {
   ArrowRight,
   Plus,
   Camera,
-  FileText,
   Search,
   PackageCheck,
   Send,
   HelpCircle,
   X,
-  History
+  History,
+  ShoppingCart,
+  Boxes,
+  DollarSign,
+  Trash2
 } from "lucide-react";
 import Link from "next/link";
 
@@ -28,11 +31,16 @@ interface OrderTaskViewProps {
   employeeName?: string;
 }
 
+const LOCAL_STORAGE_PRODUCTS_KEY = "jrc_product_catalog_cache_v1";
+
 export function OrderTaskView({ activeDepartment, employeeName = "Internal Employee" }: OrderTaskViewProps) {
-  const { orders, loading, transitionOrder, requestDepartment } = useUnifiedOrders();
+  const { orders, loading, transitionOrder, requestMaterials, requestDepartment } = useUnifiedOrders();
   const [activeTab, setActiveTab] = useState<"waiting" | "in_progress" | "completed">("waiting");
   const [selectedOrderForTimeline, setSelectedOrderForTimeline] = useState<UnifiedOrder | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Product Catalog Cache for Requisition Dropdown
+  const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
 
   // Flexible Department Request Modal State
   const [requestModalOrder, setRequestModalOrder] = useState<UnifiedOrder | null>(null);
@@ -40,7 +48,21 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
   const [requestReason, setRequestReason] = useState("");
   const [requestNotes, setRequestNotes] = useState("");
 
-  const userDept = activeDepartment === "Admin" ? "Sales" : activeDepartment;
+  // Production Material Requisition Modal State
+  const [materialModalOrder, setMaterialModalOrder] = useState<UnifiedOrder | null>(null);
+  const [requisitionItems, setRequisitionItems] = useState<MaterialRequisitionItem[]>([]);
+  const [requisitionNotes, setRequisitionNotes] = useState("");
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY);
+      if (stored) {
+        setCatalogProducts(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error("Error reading product catalog cache:", e);
+    }
+  }, []);
 
   // Filter orders by tab & search
   const filteredOrders = orders.filter((o) => {
@@ -67,7 +89,6 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
     if (activeTab === "waiting") {
       return isMyResponsibility;
     } else {
-      // in_progress
       return !isMyResponsibility;
     }
   });
@@ -90,6 +111,77 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
   const completedCount = orders.filter(
     (o) => o.current_status === "Completed" || o.current_status === "Cancelled"
   ).length;
+
+  // Material Requisition Handlers
+  const handleOpenMaterialModal = (order: UnifiedOrder) => {
+    setMaterialModalOrder(order);
+    const defaultProduct = catalogProducts.find((p) => p.category === "raw_material") || catalogProducts[0];
+    const initialItem: MaterialRequisitionItem = {
+      id: `req-${Date.now()}`,
+      material_sku: defaultProduct?.sku || "RM-RAW-01",
+      material_name: defaultProduct?.name || "Raw Chemical Material",
+      qty_needed: 10,
+      uom: defaultProduct?.uom || "KG",
+      supplier_name: defaultProduct?.supplier_name || "Primary Chemical Distributor",
+      estimated_unit_cost: Number(defaultProduct?.supplier_price || defaultProduct?.unit_cost) || 150,
+      total_cost: (Number(defaultProduct?.supplier_price || defaultProduct?.unit_cost) || 150) * 10,
+    };
+    setRequisitionItems([initialItem]);
+    setRequisitionNotes("");
+  };
+
+  const handleAddRequisitionItem = () => {
+    const defaultProduct = catalogProducts.find((p) => p.category === "raw_material") || catalogProducts[0];
+    const newItem: MaterialRequisitionItem = {
+      id: `req-${Date.now()}-${Math.random()}`,
+      material_sku: defaultProduct?.sku || "RM-RAW-01",
+      material_name: defaultProduct?.name || "Raw Chemical Material",
+      qty_needed: 10,
+      uom: defaultProduct?.uom || "KG",
+      supplier_name: defaultProduct?.supplier_name || "Primary Chemical Distributor",
+      estimated_unit_cost: Number(defaultProduct?.supplier_price || defaultProduct?.unit_cost) || 150,
+      total_cost: (Number(defaultProduct?.supplier_price || defaultProduct?.unit_cost) || 150) * 10,
+    };
+    setRequisitionItems([...requisitionItems, newItem]);
+  };
+
+  const handleRemoveRequisitionItem = (id: string) => {
+    if (requisitionItems.length <= 1) return;
+    setRequisitionItems(requisitionItems.filter((i) => i.id !== id));
+  };
+
+  const handleUpdateRequisitionItem = (id: string, field: keyof MaterialRequisitionItem, value: any) => {
+    setRequisitionItems(
+      requisitionItems.map((item) => {
+        if (item.id !== id) return item;
+        const updated = { ...item, [field]: value };
+
+        if (field === "material_sku") {
+          const prod = catalogProducts.find((p) => p.sku === value);
+          if (prod) {
+            updated.material_name = prod.name;
+            updated.uom = prod.uom || "KG";
+            updated.supplier_name = prod.supplier_name || "Chemical Supplier";
+            updated.estimated_unit_cost = Number(prod.supplier_price || prod.unit_cost) || 150;
+          }
+        }
+
+        const qty = field === "qty_needed" ? Number(value) : updated.qty_needed;
+        const cost = field === "estimated_unit_cost" ? Number(value) : updated.estimated_unit_cost || 0;
+        updated.total_cost = qty * cost;
+
+        return updated;
+      })
+    );
+  };
+
+  const handleSubmitMaterialRequisition = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!materialModalOrder) return;
+
+    requestMaterials(materialModalOrder.id, requisitionItems, employeeName, requisitionNotes);
+    setMaterialModalOrder(null);
+  };
 
   const handleCustomRequestSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,6 +289,10 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
               activeDepartment === "Admin" ||
               o.current_department_responsible.toLowerCase() === activeDepartment.toLowerCase();
 
+            const requisitionTotal = o.requested_materials
+              ? o.requested_materials.reduce((sum, item) => sum + (item.total_cost || 0), 0)
+              : 0;
+
             return (
               <div
                 key={o.id}
@@ -247,7 +343,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                   </div>
                 </div>
 
-                {/* LINE ITEMS PREVIEW */}
+                {/* ORDERED LINE ITEMS PREVIEW */}
                 {o.items && o.items.length > 0 && (
                   <div className="p-2.5 rounded-xl bg-blue-50/60 border border-blue-200 text-xs space-y-1">
                     <span className="text-[10px] font-extrabold text-blue-800 uppercase block">Ordered Products:</span>
@@ -257,6 +353,36 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                         <span className="font-mono text-blue-700 font-bold">{it.qty} {it.uom}</span>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* REQUESTED MATERIALS BREAKDOWN FOR FINANCE REVIEW */}
+                {o.requested_materials && o.requested_materials.length > 0 && (
+                  <div className="p-3.5 rounded-xl bg-amber-50 border-2 border-amber-300 text-xs space-y-2 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-amber-200 pb-1.5">
+                      <span className="font-extrabold text-amber-900 uppercase tracking-tight flex items-center gap-1.5">
+                        <Boxes className="w-4 h-4 text-amber-600" />
+                        <span>Material Purchase Requisition (From Production)</span>
+                      </span>
+                      <span className="font-mono font-extrabold text-amber-900">
+                        Total ₱{requisitionTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {o.requested_materials.map((m, idx) => (
+                        <div key={m.id || idx} className="p-2 bg-white rounded-lg border border-amber-200 flex items-center justify-between font-semibold text-slate-800">
+                          <div>
+                            <span className="font-bold text-slate-900 block">{m.material_name}</span>
+                            <span className="text-[10px] text-slate-500 font-medium">Supplier: {m.supplier_name || "Chemical Vendor"}</span>
+                          </div>
+                          <div className="text-right font-mono">
+                            <span className="text-xs font-extrabold text-blue-700 block">{m.qty_needed} {m.uom}</span>
+                            <span className="text-[10px] text-slate-600">@ ₱{(m.estimated_unit_cost || 0).toFixed(2)}/unit = ₱{(m.total_cost || 0).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -351,16 +477,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                               </button>
 
                               <button
-                                onClick={() =>
-                                  transitionOrder(
-                                    o.id,
-                                    "Waiting for Finance",
-                                    "Finance",
-                                    "Need Materials (Purchase Approval)",
-                                    employeeName,
-                                    "Raw materials insufficient. Sent to Finance for purchasing approval."
-                                  )
-                                }
+                                onClick={() => handleOpenMaterialModal(o)}
                                 className="py-2.5 px-3 rounded-xl bg-rose-100 hover:bg-rose-200 border border-rose-300 text-rose-800 font-extrabold text-xs shadow-sm"
                               >
                                 Need Materials
@@ -402,7 +519,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                                     "Sales",
                                     "Approve Purchase",
                                     employeeName,
-                                    "Raw material purchase approved by Finance. Returned to Sales for procurement."
+                                    `Raw material purchase (₱${requisitionTotal.toFixed(2)}) approved by Finance. Returned to Sales for procurement.`
                                   )
                                 }
                                 className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-sm"
@@ -549,6 +666,144 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
           order={selectedOrderForTimeline}
           onClose={() => setSelectedOrderForTimeline(null)}
         />
+      )}
+
+      {/* PRODUCTION MATERIAL REQUISITION MODAL */}
+      {materialModalOrder && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white border-2 border-blue-600 rounded-2xl w-full max-w-2xl p-5 sm:p-6 space-y-4 shadow-2xl my-auto">
+            <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+              <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                <Boxes className="w-5 h-5 text-blue-700" />
+                <span>Specify Raw Materials Needed ({materialModalOrder.order_number})</span>
+              </h3>
+              <button onClick={() => setMaterialModalOrder(null)} className="text-slate-400 hover:text-slate-900 font-bold text-lg">
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitMaterialRequisition} className="space-y-4 text-xs sm:text-sm">
+              <p className="text-xs text-slate-600 font-medium">
+                Specify the exact chemical raw materials, quantities, and units needed for Finance to approve purchasing.
+              </p>
+
+              <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                {requisitionItems.map((item, index) => (
+                  <div key={item.id} className="p-3 sm:p-4 rounded-xl bg-slate-50 border-2 border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold text-slate-600">Material Requirement #{index + 1}</span>
+                      {requisitionItems.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRequisitionItem(item.id)}
+                          className="text-rose-600 hover:text-rose-700 p-1 font-bold"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-slate-800 font-extrabold block mb-1">Select Raw Material from Catalog</label>
+                        <select
+                          value={item.material_sku}
+                          onChange={(e) => handleUpdateRequisitionItem(item.id, "material_sku", e.target.value)}
+                          className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-bold"
+                        >
+                          {catalogProducts.map((p) => (
+                            <option key={p.sku} value={p.sku}>
+                              {p.name} ({p.sku} — Supplier: {p.supplier_name || "Vendor"} ₱{Number(p.supplier_price || p.unit_cost || 0).toFixed(2)}/{p.uom || "unit"})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-slate-800 font-extrabold block mb-1">Supplier Name</label>
+                        <input
+                          type="text"
+                          value={item.supplier_name || ""}
+                          onChange={(e) => handleUpdateRequisitionItem(item.id, "supplier_name", e.target.value)}
+                          placeholder="e.g. Metro Chemical Supplies"
+                          className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-slate-800 font-extrabold block mb-1">Qty Needed</label>
+                        <input
+                          type="number"
+                          min="1"
+                          required
+                          value={item.qty_needed}
+                          onChange={(e) => handleUpdateRequisitionItem(item.id, "qty_needed", e.target.value)}
+                          className="w-full p-2 bg-white border-2 border-slate-200 rounded-xl text-xs font-mono font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-800 font-extrabold block mb-1">Unit (UOM)</label>
+                        <input
+                          type="text"
+                          required
+                          value={item.uom}
+                          onChange={(e) => handleUpdateRequisitionItem(item.id, "uom", e.target.value)}
+                          className="w-full p-2 bg-white border-2 border-slate-200 rounded-xl text-xs font-mono font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-800 font-extrabold block mb-1">Est Total (₱)</label>
+                        <div className="p-2 bg-amber-50 border-2 border-amber-200 rounded-xl font-mono font-extrabold text-amber-900 text-xs flex items-center justify-end">
+                          ₱{(item.total_cost || 0).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddRequisitionItem}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-400 border border-amber-500 text-slate-950 font-extrabold text-xs"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Add Material Line Item</span>
+              </button>
+
+              <div>
+                <label className="font-extrabold text-slate-800 block mb-1">Optional Notes for Finance</label>
+                <textarea
+                  rows={2}
+                  placeholder="Specify why materials are insufficient or urgent delivery notes..."
+                  value={requisitionNotes}
+                  onChange={(e) => setRequisitionNotes(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-medium text-slate-900"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setMaterialModalOrder(null)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-extrabold text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow-md"
+                >
+                  Submit Material Request to Finance
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* FLEXIBLE INTER-DEPARTMENT REQUEST MODAL */}
