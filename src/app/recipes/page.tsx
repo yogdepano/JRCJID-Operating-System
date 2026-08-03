@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { FlaskConical, Plus, Search, Scale, Factory, Trash2, Package } from "lucide-react";
+import { FlaskConical, Plus, Scale, Factory, CheckCircle2, Clock, ShoppingCart, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
@@ -24,14 +24,31 @@ interface BoMRecipe {
   ingredients: IngredientItem[];
 }
 
+interface TransmittedOrder {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  client_po_ref: string;
+  order_date: string;
+  status: string;
+  items: Array<{
+    product_sku: string;
+    product_name: string;
+    qty: number;
+    uom: string;
+  }>;
+}
+
 const LOCAL_STORAGE_RECIPES_KEY = "jrc_recipes_cache_v1";
 const LOCAL_STORAGE_PRODUCTS_KEY = "jrc_products_cache_v1";
+const LOCAL_STORAGE_SALES_KEY = "jrc_sales_orders_cache_v1";
 
 export default function RecipesPage() {
   const [recipes, setRecipes] = useState<BoMRecipe[]>([]);
   const [selectedRecipe, setSelectedRecipe] = useState<BoMRecipe | null>(null);
   const [targetBatchQty, setTargetBatchQty] = useState<number>(1000);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [transmittedOrders, setTransmittedOrders] = useState<TransmittedOrder[]>([]);
 
   // FORM STATE FOR NEW RECIPE CREATION
   const [availableProducts, setAvailableProducts] = useState<any[]>([]);
@@ -42,9 +59,9 @@ export default function RecipesPage() {
 
   const [formIngredients, setFormIngredients] = useState<IngredientItem[]>([]);
 
-  // Load recipes and product list
+  // Load recipes, products, and transmitted sales orders
   const loadData = async () => {
-    // Load products for dropdown
+    // 1. Load products for dropdown
     try {
       const storedProds = localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY);
       if (storedProds) {
@@ -58,7 +75,7 @@ export default function RecipesPage() {
       console.error("Products cache error:", e);
     }
 
-    // Load recipes
+    // 2. Load recipes
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_RECIPES_KEY);
       if (stored) {
@@ -72,6 +89,50 @@ export default function RecipesPage() {
     } catch (e) {
       console.error("Recipes cache error:", e);
     }
+
+    // 3. Load transmitted sales orders from Sales
+    let salesQueue: TransmittedOrder[] = [];
+    try {
+      const storedSales = localStorage.getItem(LOCAL_STORAGE_SALES_KEY);
+      if (storedSales) {
+        const parsed = JSON.parse(storedSales);
+        salesQueue = parsed.filter(
+          (so: any) => so.status === "APPROVED" || so.status === "IN_PRODUCTION"
+        );
+      }
+    } catch (e) {
+      console.error("Sales queue read error:", e);
+    }
+
+    try {
+      const supabase = createClient();
+      const { data: dbOrders } = await supabase
+        .from("sales_orders")
+        .select("*, customers(company_name)")
+        .in("status", ["APPROVED", "IN_PRODUCTION"])
+        .order("created_at", { ascending: false });
+
+      if (dbOrders && dbOrders.length > 0) {
+        const remoteQueue: TransmittedOrder[] = dbOrders.map((so: any) => ({
+          id: so.id,
+          order_number: so.order_number || `SO-2026-${so.id.slice(0, 4)}`,
+          customer_name: so.customers?.company_name || "Commercial Client",
+          client_po_ref: "EMAIL-PO-ATTACHED",
+          order_date: so.created_at ? so.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
+          status: so.status || "APPROVED",
+          items: [],
+        }));
+
+        const map = new Map<string, TransmittedOrder>();
+        salesQueue.forEach((o) => map.set(o.order_number, o));
+        remoteQueue.forEach((o) => map.set(o.order_number, o));
+        salesQueue = Array.from(map.values());
+      }
+    } catch (err) {
+      console.error("Supabase sales queue error:", err);
+    }
+
+    setTransmittedOrders(salesQueue);
   };
 
   useEffect(() => {
@@ -136,24 +197,55 @@ export default function RecipesPage() {
     setFormIngredients([]);
   };
 
+  const handleScaleForOrder = (order: TransmittedOrder) => {
+    if (order.items && order.items.length > 0) {
+      const item = order.items[0];
+      const matchingRecipe = recipes.find(
+        (r) => r.finished_product_sku === item.product_sku || r.finished_product_name.toLowerCase().includes(item.product_name.toLowerCase())
+      );
+      if (matchingRecipe) {
+        setSelectedRecipe(matchingRecipe);
+        setTargetBatchQty(item.qty * matchingRecipe.batch_yield_qty);
+      } else {
+        setTargetBatchQty(item.qty * 100);
+      }
+    }
+  };
+
+  const handleMarkBatchComplete = async (orderId: string) => {
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_SALES_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const updated = parsed.map((so: any) =>
+          so.id === orderId || so.order_number === orderId ? { ...so, status: "DISPATCHED" } : so
+        );
+        localStorage.setItem(LOCAL_STORAGE_SALES_KEY, JSON.stringify(updated));
+      }
+      setTransmittedOrders(transmittedOrders.filter((o) => o.id !== orderId && o.order_number !== orderId));
+    } catch (e) {
+      console.error("Batch complete error:", e);
+    }
+  };
+
   const scalingMultiplier = selectedRecipe ? targetBatchQty / (selectedRecipe.batch_yield_qty || 1) : 1;
 
   return (
-    <RoleGuard allowedRoles={["super_admin", "production_manager"]} moduleName="Chemical BoM & Production Recipes">
+    <RoleGuard allowedRoles={["super_admin", "production_manager", "production_lead"]} moduleName="Chemical BoM & Production Recipes">
       <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-        {/* HEADER - LIGHT MODE */}
+        {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200">
               <FlaskConical className="w-7 h-7 text-blue-700" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Production Department (BoM Formulas)</h1>
-              <p className="text-xs sm:text-sm text-slate-600 font-medium">Link raw chemical ingredients, scents, and batch scaling for finished products</p>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Production Department (BoM & Work Orders)</h1>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">Fulfill transmitted Sales Orders, scale chemical formulas, and log raw material consumption</p>
             </div>
           </div>
 
@@ -172,13 +264,93 @@ export default function RecipesPage() {
           </button>
         </div>
 
+        {/* TRANSMITTED SALES ORDERS PRODUCTION QUEUE */}
+        <div className="bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-orange-100 text-orange-700">
+                <Clock className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Transmitted Production Work Orders ({transmittedOrders.length})</h3>
+                <p className="text-xs text-slate-500 font-medium">Sales orders transmitted from Sales Department requiring chemical batch mixing</p>
+              </div>
+            </div>
+            <Link
+              href="/sales"
+              className="text-xs font-extrabold text-blue-700 hover:underline flex items-center gap-1"
+            >
+              <span>View All Sales Orders</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {transmittedOrders.length === 0 ? (
+            <div className="p-6 text-center bg-slate-50 border-2 border-slate-200 rounded-xl space-y-2">
+              <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+              <p className="text-xs text-slate-700 font-extrabold">All Transmitted Sales Orders Are Fulfilled!</p>
+              <p className="text-[11px] text-slate-500 font-medium">
+                When Sales logs and transmits a new Sales Order, it will automatically populate here for Chemical Production.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {transmittedOrders.map((so) => (
+                <div key={so.id} className="p-4 rounded-xl bg-slate-50 border-2 border-blue-200 space-y-3 relative overflow-hidden">
+                  <div className="w-full h-1.5 bg-orange-500 absolute top-0 left-0"></div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-extrabold text-blue-700">{so.order_number}</span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-100 text-orange-800 border border-orange-300 uppercase">
+                      {so.status}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-extrabold text-slate-900">{so.customer_name}</h4>
+                    <p className="text-xs text-slate-600 font-mono">PO Ref: {so.client_po_ref}</p>
+                  </div>
+
+                  {so.items && so.items.length > 0 && (
+                    <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Ordered Products:</span>
+                      {so.items.map((it, idx) => (
+                        <div key={idx} className="flex justify-between font-semibold text-slate-800">
+                          <span className="truncate max-w-[170px]">{it.product_name}</span>
+                          <span className="font-mono text-blue-700 font-bold">{it.qty} {it.uom}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="pt-1 flex items-center gap-2">
+                    <button
+                      onClick={() => handleScaleForOrder(so)}
+                      className="flex-1 py-2 px-3 rounded-lg bg-blue-700 hover:bg-blue-600 text-white font-extrabold text-xs shadow-xs text-center"
+                    >
+                      Scale Formula Batch
+                    </button>
+                    <button
+                      onClick={() => handleMarkBatchComplete(so.id)}
+                      className="py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-xs"
+                      title="Mark Batch Complete"
+                    >
+                      ✓ Complete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* WORKSPACE GRID */}
         {recipes.length === 0 ? (
           <div className="p-12 text-center bg-white border-2 border-slate-200 rounded-2xl space-y-3 shadow-sm">
             <FlaskConical className="w-12 h-12 text-slate-400 mx-auto" />
             <h3 className="text-base font-extrabold text-slate-900">No Product Formulas Added Yet</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
-              Click "+ Build Product Recipe / Formula" to register your chemical raw materials, scent additives, and standard batch yield ratios.
+              Click "+ Build Product Recipe / Formula" to register chemical raw materials, scent additives, and standard batch yield ratios.
             </p>
           </div>
         ) : (
@@ -248,27 +420,30 @@ export default function RecipesPage() {
                             <th className="py-2.5 px-3">Raw Material SKU</th>
                             <th className="py-2.5 px-3">Ingredient Name</th>
                             <th className="py-2.5 px-3">Standard Ratio</th>
-                            <th className="py-2.5 px-3">Scaled Requirement ({targetBatchQty} Batch)</th>
+                            <th className="py-2.5 px-3 text-right">Scaled Required Qty</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 text-sm text-slate-800">
-                          {selectedRecipe.ingredients.map((ing, idx) => (
-                            <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
-                              <td className="py-3 px-3 font-mono font-extrabold text-blue-700">{ing.raw_material_sku}</td>
-                              <td className="py-3 px-3 font-extrabold text-slate-900">{ing.name}</td>
-                              <td className="py-3 px-3 font-mono font-semibold text-slate-700">{ing.ratio_qty} {ing.uom}</td>
-                              <td className="py-3 px-3 font-mono font-extrabold text-blue-900">
-                                {(ing.ratio_qty * scalingMultiplier).toFixed(2)} {ing.uom}
-                              </td>
-                            </tr>
-                          ))}
+                        <tbody className="divide-y divide-slate-100 text-sm font-semibold">
+                          {selectedRecipe.ingredients.map((ing, idx) => {
+                            const scaledQty = ing.ratio_qty * scalingMultiplier;
+                            return (
+                              <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
+                                <td className="py-3 px-3 font-mono text-xs text-blue-700">{ing.raw_material_sku}</td>
+                                <td className="py-3 px-3 text-slate-900 font-extrabold">{ing.name}</td>
+                                <td className="py-3 px-3 text-slate-600 font-mono text-xs">{ing.ratio_qty} {ing.uom}</td>
+                                <td className="py-3 px-3 text-right font-mono font-extrabold text-amber-600 text-base">
+                                  {scaledQty.toFixed(2)} {ing.uom}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="p-8 text-center text-slate-400">Select a formula to view scaled ingredients</div>
+                <div className="p-12 text-center text-slate-400 font-medium">Select a formula to view scaled ingredients.</div>
               )}
             </div>
           </div>
@@ -281,114 +456,113 @@ export default function RecipesPage() {
               <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
                   <FlaskConical className="w-5 h-5 text-blue-700" />
-                  <span>Build Chemical BoM Recipe / Formula</span>
+                  <span>Build Chemical Product Formula / Recipe</span>
                 </h3>
                 <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-lg font-bold">✕</button>
               </div>
 
               <form onSubmit={handleSaveRecipe} className="space-y-4 text-xs sm:text-sm">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-800 font-extrabold block mb-1">Finished Chemical Product Item</label>
+                  <select
+                    value={selectedProductSku}
+                    onChange={(e) => setSelectedProductSku(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900"
+                  >
+                    {availableProducts.map((p) => (
+                      <option key={p.sku} value={p.sku}>
+                        {p.name} ({p.sku})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Finished Product SKU</label>
-                    {availableProducts.length > 0 ? (
-                      <select
-                        value={selectedProductSku}
-                        onChange={(e) => setSelectedProductSku(e.target.value)}
-                        className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-semibold"
-                      >
-                        {availableProducts.map((p) => (
-                          <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. FG-DEGR-500"
-                        value={selectedProductSku}
-                        onChange={(e) => setSelectedProductSku(e.target.value)}
-                        className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm font-mono text-slate-900 font-bold"
-                      />
-                    )}
+                    <label className="text-slate-800 font-extrabold block mb-1">Standard Batch Yield Qty</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={batchYieldQty}
+                      onChange={(e) => setBatchYieldQty(Number(e.target.value))}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl font-mono text-xs sm:text-sm font-extrabold text-slate-900"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-slate-800 font-extrabold block mb-1">Base Yield Qty</label>
-                      <input
-                        type="number"
-                        required
-                        value={batchYieldQty}
-                        onChange={(e) => setBatchYieldQty(Number(e.target.value))}
-                        className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-slate-800 font-extrabold block mb-1">Yield UOM</label>
-                      <input
-                        type="text"
-                        required
-                        value={batchYieldUom}
-                        onChange={(e) => setBatchYieldUom(e.target.value)}
-                        className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono text-slate-900"
-                      />
-                    </div>
+                  <div>
+                    <label className="text-slate-800 font-extrabold block mb-1">Yield UOM</label>
+                    <select
+                      value={batchYieldUom}
+                      onChange={(e) => setBatchYieldUom(e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
+                    >
+                      <option value="L (Liters)">L (Liters)</option>
+                      <option value="KG (Kilograms)">KG (Kilograms)</option>
+                      <option value="Drum (200L)">Drum (200L)</option>
+                      <option value="Pail (20L)">Pail (20L)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-800 font-extrabold block mb-1">Recipe Version</label>
+                    <input
+                      type="text"
+                      required
+                      value={recipeVersion}
+                      onChange={(e) => setRecipeVersion(e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl font-mono text-xs sm:text-sm font-extrabold text-slate-900"
+                    />
                   </div>
                 </div>
 
-                {/* INGREDIENTS BUILDER */}
                 <div className="border-t-2 border-b-2 border-slate-100 py-3 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-blue-700 uppercase tracking-wider">Raw Chemical Ingredients</span>
+                    <span className="text-xs font-extrabold text-blue-700 uppercase tracking-wider">
+                      Formula Ingredients ({formIngredients.length})
+                    </span>
                     <button
                       type="button"
                       onClick={handleAddIngredient}
-                      className="px-3 py-1 rounded bg-amber-400 text-slate-950 font-extrabold text-xs"
+                      className="px-3 py-1.5 rounded-lg bg-amber-400 border border-amber-500 text-slate-950 font-extrabold text-xs"
                     >
                       + Add Ingredient
                     </button>
                   </div>
 
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                     {formIngredients.map((ing, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                        <input
-                          type="text"
-                          placeholder="Raw Material SKU"
+                      <div key={idx} className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200">
+                        <select
                           value={ing.raw_material_sku}
                           onChange={(e) => handleUpdateIngredient(idx, "raw_material_sku", e.target.value)}
-                          className="w-1/3 p-2 bg-white border border-slate-300 rounded text-xs font-mono font-bold"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Ingredient Name"
-                          value={ing.name}
-                          onChange={(e) => handleUpdateIngredient(idx, "name", e.target.value)}
-                          className="w-1/3 p-2 bg-white border border-slate-300 rounded text-xs font-bold"
-                        />
+                          className="flex-1 p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold"
+                        >
+                          {availableProducts.map((p) => (
+                            <option key={p.sku} value={p.sku}>
+                              {p.name} ({p.sku})
+                            </option>
+                          ))}
+                        </select>
+
                         <input
                           type="number"
-                          placeholder="Ratio"
+                          step="0.01"
+                          required
                           value={ing.ratio_qty}
                           onChange={(e) => handleUpdateIngredient(idx, "ratio_qty", Number(e.target.value))}
-                          className="w-1/6 p-2 bg-white border border-slate-300 rounded text-xs font-mono font-bold"
+                          className="w-20 p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-right"
                         />
-                        <input
-                          type="text"
-                          placeholder="UOM"
-                          value={ing.uom}
-                          onChange={(e) => handleUpdateIngredient(idx, "uom", e.target.value)}
-                          className="w-1/6 p-2 bg-white border border-slate-300 rounded text-xs font-mono"
-                        />
-                        {formIngredients.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveIngredient(idx)}
-                            className="text-rose-600 font-bold px-1"
-                          >
-                            ✕
-                          </button>
-                        )}
+
+                        <span className="text-xs font-mono font-extrabold text-slate-600 w-12">{ing.uom}</span>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveIngredient(idx)}
+                          className="p-1 text-rose-600 hover:text-rose-700 font-bold"
+                        >
+                          ✕
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -398,13 +572,13 @@ export default function RecipesPage() {
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-extrabold text-xs"
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-extrabold"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl bg-blue-700 hover:bg-blue-600 text-white font-extrabold text-xs ring-2 ring-amber-400"
+                    className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 text-xs font-extrabold shadow-md"
                   >
                     Save BoM Recipe
                   </button>
