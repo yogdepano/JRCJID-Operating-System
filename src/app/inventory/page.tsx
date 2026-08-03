@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Truck, Search, History, CheckCircle2, Package, ArrowDownRight, ArrowUpRight, Plus, AlertTriangle, Layers, Edit } from "lucide-react";
+import { Truck, Search, History, Package, ArrowDownRight, ArrowUpRight, Plus, Layers } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
 import { RoleGuard } from "@/components/Auth/RoleGuard";
+import { OrderTaskView } from "@/components/Orders/OrderTaskView";
 
 interface InventoryItem {
   id: string;
@@ -50,7 +51,6 @@ export default function InventoryPage() {
   const loadData = async () => {
     let prods: InventoryItem[] = [];
 
-    // Load products from local cache
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY);
       if (stored) {
@@ -70,7 +70,6 @@ export default function InventoryPage() {
       console.error("Local storage product error:", e);
     }
 
-    // Load products from Supabase
     try {
       const supabase = createClient();
       const { data } = await supabase.from("products").select("*");
@@ -97,7 +96,6 @@ export default function InventoryPage() {
 
     setInventoryList(prods);
 
-    // Load movement history
     try {
       const cachedM = localStorage.getItem(LOCAL_STORAGE_MOVEMENTS_KEY);
       if (cachedM) {
@@ -112,7 +110,6 @@ export default function InventoryPage() {
     loadData();
   }, []);
 
-  // Stock Adjustment Handler
   const handleSaveStockAdjustment = (e: React.FormEvent) => {
     e.preventDefault();
     const targetProd = inventoryList.find((p) => p.sku === adjustSku);
@@ -128,7 +125,6 @@ export default function InventoryPage() {
       console.error("Local storage stock update error:", err);
     }
 
-    // Log movement record
     const newMovement: InventoryMovement = {
       id: `mov-${Date.now()}`,
       timestamp: new Date().toISOString().replace("T", " ").substring(0, 16),
@@ -139,7 +135,7 @@ export default function InventoryPage() {
       ref_doc: adjustRefDoc || "MANUAL-ADJUSTMENT",
       qty_delta: adjustQty,
       uom: targetProd.uom,
-      user: "Logistics Admin",
+      user: "Logistics Officer",
     };
 
     const updatedMovements = [newMovement, ...movements];
@@ -182,8 +178,8 @@ export default function InventoryPage() {
               <Truck className="w-7 h-7 text-blue-700" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Logistics & Inventory Master</h1>
-              <p className="text-xs sm:text-sm text-slate-600 font-medium">Real-time chemical stock levels, UOM balances, batch lots, and stock movements</p>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Logistics Department (Delivery & Material Pickups)</h1>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">Collect purchased raw materials, confirm supplier deliveries, dispatch finished goods, and update stock ledgers</p>
             </div>
           </div>
 
@@ -195,9 +191,12 @@ export default function InventoryPage() {
             className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 border-2 border-amber-500 text-slate-950 font-extrabold text-sm shadow-md shadow-yellow-500/20 active:scale-95 transition-all"
           >
             <Plus className="w-5 h-5 text-slate-950" />
-            <span>Receive / Adjust Stock</span>
+            <span>+ Receive / Adjust Stock</span>
           </button>
         </div>
+
+        {/* TASK-ORIENTED SYNCHRONIZED ORDER WORKSPACE FOR LOGISTICS */}
+        <OrderTaskView activeDepartment="Logistics" employeeName="Logistics Officer" />
 
         {/* SUMMARY BAR */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">

@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { DollarSign, FileText, TrendingUp, Clock, CheckCircle2, ArrowRight, Search, Plus, Filter, AlertCircle } from "lucide-react";
+import { DollarSign, FileText, Search } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
 import { RoleGuard } from "@/components/Auth/RoleGuard";
+import { OrderTaskView } from "@/components/Orders/OrderTaskView";
 
 interface InvoiceRecord {
   id: string;
@@ -120,8 +121,8 @@ export default function FinancePage() {
               <DollarSign className="w-7 h-7 text-blue-700" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Finance & Accounts Receivable (AR)</h1>
-              <p className="text-xs sm:text-sm text-slate-600 font-medium">BIR 12% VAT accounting, sales invoicing, collection schedules, and credit monitoring</p>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Finance & Accounts Receivable (Purchasing Approvals)</h1>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">Approve raw material purchases requested by Production, monitor BIR 12% VAT, and review credit terms</p>
             </div>
           </div>
 
@@ -134,10 +135,12 @@ export default function FinancePage() {
           </Link>
         </div>
 
-        {/* FINANCIAL SUMMARY CARDS WITH SOLID STOPLIGHT ACCENT BARS */}
+        {/* TASK-ORIENTED SYNCHRONIZED ORDER WORKSPACE FOR FINANCE */}
+        <OrderTaskView activeDepartment="Finance" employeeName="Finance Manager" />
+
+        {/* FINANCIAL SUMMARY CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm space-y-1 relative overflow-hidden">
-            {/* SOLID STOPLIGHT ORANGE ACCENT - IN PROGRESS AR */}
             <div className="w-full h-2 bg-orange-500 absolute top-0 left-0"></div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Total Receivables (Gross)</span>
             <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">₱{totalAR.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
@@ -145,7 +148,6 @@ export default function FinancePage() {
           </div>
 
           <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm space-y-1 relative overflow-hidden">
-            {/* SOLID STOPLIGHT ORANGE ACCENT - TAX COMPUTATION */}
             <div className="w-full h-2 bg-orange-500 absolute top-0 left-0"></div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">BIR Output VAT (12%)</span>
             <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">₱{totalVat.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
@@ -153,7 +155,6 @@ export default function FinancePage() {
           </div>
 
           <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm space-y-1 relative overflow-hidden">
-            {/* SOLID STOPLIGHT GREEN ACCENT - SETTLED COLLECTIONS */}
             <div className="w-full h-2 bg-emerald-500 absolute top-0 left-0"></div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Collection Rate</span>
             <p className="text-2xl sm:text-3xl font-extrabold text-emerald-700 font-mono">{paidCount} of {invoices.length} Invoices</p>

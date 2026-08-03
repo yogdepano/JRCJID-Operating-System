@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Package, Plus, Search, Filter, AlertTriangle, ArrowLeft, Wand2, Trash2, Edit, Check } from "lucide-react";
+import { Package, Plus, Search, Wand2, Trash2, Edit } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
+import { OrderTaskView } from "@/components/Orders/OrderTaskView";
 
 interface Product {
   id: string;
@@ -101,7 +102,6 @@ export default function ProductsPage() {
     fetchProducts();
   }, []);
 
-  // DELETE PRODUCT HANDLER
   const handleDeleteProduct = async (sku: string) => {
     if (!confirm(`Are you sure you want to delete SKU "${sku}" from the catalog?`)) return;
 
@@ -122,7 +122,6 @@ export default function ProductsPage() {
     }
   };
 
-  // EDIT PRODUCT HANDLERS
   const handleOpenEditModal = (prod: Product) => {
     setEditingProduct({ ...prod });
     setIsEditModalOpen(true);
@@ -159,7 +158,6 @@ export default function ProductsPage() {
     setEditingProduct(null);
   };
 
-  // AUTO SKU GENERATOR LOGIC
   const generateSkuFromName = (productName: string, cat: Product["category"], variant: string) => {
     if (!productName.trim()) return "";
     
@@ -191,7 +189,6 @@ export default function ProductsPage() {
     return `${prefix}-${nameCode}${scentCode}${numPart}`;
   };
 
-  // MULTI-ITEM FORM HANDLERS
   const handleAddMoreProductItem = () => {
     const newItem: NewProductItem = {
       id: `item-${Date.now()}`,
@@ -304,7 +301,7 @@ export default function ProductsPage() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Marketing & Product Catalog Master</h1>
-              <p className="text-xs sm:text-sm text-slate-600 font-medium">Batch register SKUs, scent variants, unit costs, and selling prices</p>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">Fulfill packaging/label requests, batch register SKUs, scent variants, unit costs, and selling prices</p>
             </div>
           </div>
 
@@ -317,7 +314,10 @@ export default function ProductsPage() {
           </button>
         </div>
 
-        {/* SEARCH & FILTERS */}
+        {/* TASK-ORIENTED SYNCHRONIZED ORDER WORKSPACE FOR MARKETING */}
+        <OrderTaskView activeDepartment="Marketing" employeeName="Marketing Specialist" />
+
+        {/* SEARCH & FILTERS FOR CATALOG */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-2xl border-2 border-slate-200 shadow-sm">
           <div className="relative w-full sm:w-80">
             <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -353,12 +353,12 @@ export default function ProductsPage() {
             <Package className="w-12 h-12 text-slate-400 mx-auto" />
             <h3 className="text-base font-extrabold text-slate-900">No Products in Catalog</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
-              Click "+ Add Products to Catalog" to enter your raw materials, finished chemicals, packaging, and selling prices.
+              Click "+ Add Products to Catalog" to enter raw materials, finished chemicals, packaging, and selling prices.
             </p>
           </div>
         ) : (
           <>
-            {/* MOBILE PRODUCT CARDS WITH EDIT & DELETE */}
+            {/* MOBILE PRODUCT CARDS */}
             <div className="block lg:hidden space-y-4">
               {filteredProducts.map((p) => (
                 <div key={p.sku} className="p-5 rounded-2xl bg-white border-2 border-slate-200 space-y-3 shadow-md">
@@ -400,7 +400,7 @@ export default function ProductsPage() {
               ))}
             </div>
 
-            {/* DESKTOP DATA TABLE WITH EDIT & DELETE */}
+            {/* DESKTOP DATA TABLE */}
             <div className="hidden lg:block p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
