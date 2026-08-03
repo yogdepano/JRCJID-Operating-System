@@ -385,6 +385,7 @@ export default function SalesPage() {
                     <th className="py-3 px-3">Total Amount (₱)</th>
                     <th className="py-3 px-3">Workflow Status</th>
                     <th className="py-3 px-3">Payment</th>
+                    <th className="py-3 px-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm text-slate-800">
@@ -405,6 +406,22 @@ export default function SalesPage() {
                         <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-50 text-amber-800 border border-amber-300">
                           {o.payment_status}
                         </span>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            href={`/documents?type=sales_invoice&so=${encodeURIComponent(o.order_number)}`}
+                            className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-extrabold text-xs transition-all flex items-center gap-1"
+                          >
+                            <span>Invoice</span>
+                          </Link>
+                          <Link
+                            href={`/documents?type=delivery_receipt&so=${encodeURIComponent(o.order_number)}`}
+                            className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-extrabold text-xs transition-all flex items-center gap-1"
+                          >
+                            <span>DR</span>
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))}

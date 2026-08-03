@@ -236,13 +236,22 @@ export default function FinancePage() {
                       </span>
                     </td>
                     <td className="py-3.5 px-3">
-                      <Link
-                        href="/documents"
-                        className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-extrabold text-xs transition-all flex items-center gap-1 w-fit"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>Print Invoice</span>
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`/documents?type=sales_invoice&so=${encodeURIComponent(inv.so_number)}&inv=${encodeURIComponent(inv.invoice_number)}`}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-extrabold text-xs transition-all flex items-center gap-1"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Invoice</span>
+                        </Link>
+                        <Link
+                          href={`/documents?type=delivery_receipt&so=${encodeURIComponent(inv.so_number)}&inv=${encodeURIComponent(inv.invoice_number)}`}
+                          className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-extrabold text-xs transition-all flex items-center gap-1"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-amber-600" />
+                          <span>DR</span>
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
