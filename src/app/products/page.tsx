@@ -146,6 +146,8 @@ export default function ProductsPage() {
         uom: editingProduct.uom,
         unit_cost: editingProduct.unit_cost,
         selling_price: editingProduct.selling_price,
+        supplier_name: editingProduct.supplier_name,
+        supplier_price: editingProduct.supplier_price,
       }).eq("sku", editingProduct.sku);
     } catch (err) {
       console.error("Supabase product edit notice:", err);
@@ -185,7 +187,6 @@ export default function ProductsPage() {
     return `${prefix}-${nameCode}${scentCode}${numPart}`;
   };
 
-  // SAVE SUPPLIER RAW MATERIAL
   const handleSaveSupplierMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalSku = supplierMatSku || generateSkuFromName(supplierMatName, supplierCategory, "") || `RM-${Date.now()}`;
@@ -225,6 +226,8 @@ export default function ProductsPage() {
         uom: newProd.uom,
         unit_cost: newProd.unit_cost,
         selling_price: 0,
+        supplier_name: newProd.supplier_name,
+        supplier_price: newProd.supplier_price,
       });
     } catch (err) {
       console.error("Supabase insert error:", err);
@@ -236,7 +239,6 @@ export default function ProductsPage() {
     setSupplierUnitPrice(0);
   };
 
-  // SAVE FINISHED SALES PRODUCT
   const handleSaveSalesProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalSku = salesProdSku || generateSkuFromName(salesProdName, "finished_chemical", salesProdVariant) || `FG-${Date.now()}`;
@@ -277,6 +279,8 @@ export default function ProductsPage() {
         uom: newProd.uom,
         unit_cost: newProd.unit_cost,
         selling_price: newProd.selling_price,
+        supplier_name: newProd.supplier_name,
+        supplier_price: newProd.supplier_price,
       });
     } catch (err) {
       console.error("Supabase insert error:", err);
