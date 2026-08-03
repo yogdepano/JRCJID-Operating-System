@@ -28,7 +28,7 @@ export default function PrintableDocument({
   date,
   party_name,
   party_address,
-  tin = "000-123-456-000",
+  tin = "105-355-027-000 VAT",
   payment_terms = "NET 30",
   items,
 }: DocumentProps) {
@@ -65,8 +65,8 @@ export default function PrintableDocument({
           <div>
             <h1 className="text-xl font-extrabold tracking-tight text-slate-900">JRC INDUSTRIAL SALES</h1>
             <p className="text-xs text-slate-600 font-medium">Household & Industrial Chemicals Manufacturing • Pest Control Services</p>
-            <p className="text-[11px] text-slate-500 mt-1">123 Industrial Avenue, Barangay Metro, Manila, Philippines</p>
-            <p className="text-[11px] text-slate-500">Tel: +63 (02) 8888-5678 | Email: billing@jrcindustrial.ph | TIN: 123-456-789-000 VAT</p>
+            <p className="text-[11px] text-slate-500 mt-1">#5 Luzon St. Filipinas Village, Brgy. Malanday, Marikina City 1805</p>
+            <p className="text-[11px] text-slate-500">Tel. No.: 02-8948-2516 | Email: jrcjid@yahoo.com | TIN: 105-355-027-000 VAT</p>
           </div>
           <div className="text-right">
             <span className="inline-block px-3 py-1 bg-slate-900 text-white font-bold text-xs rounded uppercase tracking-wider mb-2">
