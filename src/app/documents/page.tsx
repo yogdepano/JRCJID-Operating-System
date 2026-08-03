@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { FileText, Printer, Building2, CheckCircle2, ChevronDown } from "lucide-react";
-import Link from "next/link";
+import { FileText, Printer, Building2, CheckCircle2 } from "lucide-react";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
 import PrintableDocument from "@/components/documents/PrintableDocument";
+import { createClient } from "@/lib/supabase/client";
 
 interface OrderLineItem {
   id: string;
@@ -21,11 +21,11 @@ interface SalesOrder {
   id: string;
   order_number: string;
   customer_name: string;
-  client_po_ref: string;
-  delivery_address: string;
+  client_po_ref?: string;
+  delivery_address?: string;
   order_date: string;
   total_amount: number;
-  payment_terms: string;
+  payment_terms?: string;
   items?: OrderLineItem[];
 }
 
@@ -42,26 +42,71 @@ function DocumentVaultContent() {
   const [selectedSoNum, setSelectedSoNum] = useState<string>(targetSoNum || "");
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_SALES_KEY);
-      if (stored) {
-        const parsed: SalesOrder[] = JSON.parse(stored);
-        if (parsed.length > 0) {
-          setOrders(parsed);
-          const found = targetSoNum ? parsed.find((o) => o.order_number === targetSoNum) : parsed[0];
-          if (found) setSelectedSoNum(found.order_number);
+    async function fetchOrders() {
+      let loadedOrders: SalesOrder[] = [];
+
+      // 1. Try local storage cache first
+      try {
+        const stored = localStorage.getItem(LOCAL_STORAGE_SALES_KEY);
+        if (stored) {
+          const parsed: SalesOrder[] = JSON.parse(stored);
+          if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+            loadedOrders = parsed;
+          }
+        }
+      } catch (e) {
+        console.error("Local sales order read error:", e);
+      }
+
+      // 2. Fetch from Supabase
+      try {
+        const supabase = createClient();
+        const { data: dbOrders, error } = await supabase
+          .from("sales_orders")
+          .select("*, customers(company_name, shipping_address, payment_terms)")
+          .order("created_at", { ascending: false });
+
+        if (!error && dbOrders && dbOrders.length > 0) {
+          const supabaseOrders: SalesOrder[] = dbOrders.map((so: any) => ({
+            id: so.id,
+            order_number: so.order_number || `SO-2026-${so.id.slice(0, 4)}`,
+            customer_name: so.customers?.company_name || "Commercial Client",
+            delivery_address: typeof so.customers?.shipping_address === "string" 
+              ? so.customers.shipping_address 
+              : so.customers?.shipping_address?.street || "Client Main Facility",
+            order_date: so.created_at ? so.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
+            total_amount: Number(so.total_amount) || 0,
+            payment_terms: so.customers?.payment_terms || "NET 30 Days",
+          }));
+
+          const map = new Map<string, SalesOrder>();
+          loadedOrders.forEach((o) => map.set(o.order_number, o));
+          supabaseOrders.forEach((o) => map.set(o.order_number, o));
+          loadedOrders = Array.from(map.values());
+        }
+      } catch (err) {
+        console.error("Supabase sales orders fetch error:", err);
+      }
+
+      setOrders(loadedOrders);
+      if (loadedOrders.length > 0) {
+        const found = targetSoNum ? loadedOrders.find((o) => o.order_number === targetSoNum) : loadedOrders[0];
+        if (found) {
+          setSelectedSoNum(found.order_number);
+        } else {
+          setSelectedSoNum(loadedOrders[0].order_number);
         }
       }
-    } catch (e) {
-      console.error("Local sales order read error:", e);
     }
+
+    fetchOrders();
   }, [targetSoNum]);
 
   const activeOrder = orders.find((o) => o.order_number === selectedSoNum) || orders[0];
 
   const docNumber = targetInvNum || (activeOrder ? (docType === "sales_invoice" ? `SI-2026-${activeOrder.order_number.replace("SO-", "")}` : `DR-2026-${activeOrder.order_number.replace("SO-", "")}`) : "DOC-PENDING");
 
-  const displayItems = activeOrder.items && activeOrder.items.length > 0
+  const displayItems = activeOrder?.items && activeOrder.items.length > 0
     ? activeOrder.items.map((it) => ({
         code: it.product_sku,
         description: it.product_name,
@@ -75,7 +120,7 @@ function DocumentVaultContent() {
           description: "Industrial Chemical Detergent Formulation",
           qty: 1,
           uom: "LOT",
-          unit_price: activeOrder.total_amount / 1.12,
+          unit_price: activeOrder?.total_amount ? activeOrder.total_amount / 1.12 : 10000,
         },
       ];
 
@@ -108,17 +153,21 @@ function DocumentVaultContent() {
 
         <div className="flex items-center gap-2">
           <label className="text-xs font-extrabold text-slate-700 whitespace-nowrap">Select Sales Order:</label>
-          <select
-            value={selectedSoNum}
-            onChange={(e) => setSelectedSoNum(e.target.value)}
-            className="p-2 bg-slate-50 border-2 border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:border-blue-600"
-          >
-            {orders.map((o) => (
-              <option key={o.id || o.order_number} value={o.order_number}>
-                {o.order_number} — {o.customer_name} (₱{o.total_amount.toLocaleString()})
-              </option>
-            ))}
-          </select>
+          {orders.length === 0 ? (
+            <span className="text-xs font-bold text-slate-400 italic">No Sales Orders Issued Yet</span>
+          ) : (
+            <select
+              value={selectedSoNum}
+              onChange={(e) => setSelectedSoNum(e.target.value)}
+              className="p-2 bg-slate-50 border-2 border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:border-blue-600"
+            >
+              {orders.map((o) => (
+                <option key={o.id || o.order_number} value={o.order_number}>
+                  {o.order_number} — {o.customer_name} (₱{(o.total_amount || 0).toLocaleString()})
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -127,8 +176,8 @@ function DocumentVaultContent() {
         document_type={docType === "sales_invoice" ? "SALES_INVOICE" : "DELIVERY_RECEIPT"}
         document_number={docNumber}
         date={activeOrder?.order_date || new Date().toISOString().split("T")[0]}
-        party_name={activeOrder?.customer_name || "Select a Sales Order"}
-        party_address={activeOrder?.delivery_address || "Client Delivery Location"}
+        party_name={activeOrder?.customer_name || "Official Commercial Client"}
+        party_address={activeOrder?.delivery_address || "Client Registered Office & Delivery Facility"}
         payment_terms={activeOrder?.payment_terms || "NET 30 Days"}
         tin="123-456-789-000 VAT"
         items={displayItems}
