@@ -5,6 +5,7 @@ import { Truck, Search, History, CheckCircle2, Package, ArrowDownRight, ArrowUpR
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
+import { RoleGuard } from "@/components/Auth/RoleGuard";
 
 interface InventoryItem {
   id: string;
@@ -168,7 +169,8 @@ export default function InventoryPage() {
   const totalStockValuation = inventoryList.reduce((acc, item) => acc + item.current_stock * item.unit_cost, 0);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <RoleGuard allowedRoles={["super_admin", "production_manager", "production_lead", "purchasing_officer", "logistics_driver"]} moduleName="Logistics & Stock Warehouse Ledger">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
 
@@ -485,6 +487,7 @@ export default function InventoryPage() {
           </div>
         )}
       </main>
-    </div>
+      </div>
+    </RoleGuard>
   );
 }

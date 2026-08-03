@@ -32,8 +32,8 @@ const mainDepartmentNav: NavItem[] = [
   { name: "Sales", href: "/sales", icon: ShoppingCart, allowedRoles: ["super_admin", "sales_rep", "finance_manager"] },
   { name: "Finance", href: "/finance", icon: DollarSign, allowedRoles: ["super_admin", "finance_manager"] },
   { name: "Marketing", href: "/products", icon: Target },
-  { name: "Production", href: "/recipes", icon: Factory, allowedRoles: ["super_admin", "production_manager"] },
-  { name: "Logistics", href: "/inventory", icon: Truck, allowedRoles: ["super_admin", "production_manager", "purchasing_officer", "logistics_driver"] },
+  { name: "Production", href: "/recipes", icon: Factory, allowedRoles: ["super_admin", "production_manager", "production_lead"] },
+  { name: "Logistics", href: "/inventory", icon: Truck, allowedRoles: ["super_admin", "production_manager", "production_lead", "purchasing_officer", "logistics_driver"] },
 ];
 
 const secondaryNav: NavItem[] = [

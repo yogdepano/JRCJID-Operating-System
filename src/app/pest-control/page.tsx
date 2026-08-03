@@ -5,6 +5,7 @@ import { Bug, Plus, Search, MapPin, Calendar, CheckCircle2, Clock, Trash2, Edit3
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
+import { RoleGuard } from "@/components/Auth/RoleGuard";
 
 interface ServiceJob {
   id: string;
@@ -172,7 +173,8 @@ export default function PestControlPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <RoleGuard allowedRoles={["super_admin", "sales_rep", "pest_control_tech", "purchasing_officer", "logistics_driver"]} moduleName="Pest Control Field Dispatch & Services">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
 
@@ -407,6 +409,7 @@ export default function PestControlPage() {
           </div>
         )}
       </main>
-    </div>
+      </div>
+    </RoleGuard>
   );
 }

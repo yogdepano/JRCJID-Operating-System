@@ -5,6 +5,7 @@ import { ShoppingCart, Plus, Search, Trash2, MapPin, ArrowRight, Package } from 
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
+import { RoleGuard } from "@/components/Auth/RoleGuard";
 
 interface OrderLineItem {
   id: string;
@@ -282,7 +283,8 @@ export default function SalesPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <RoleGuard allowedRoles={["super_admin", "sales_rep", "finance_manager"]} moduleName="Sales Orders & Commercial Quotes">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
 
@@ -630,6 +632,7 @@ export default function SalesPage() {
           </div>
         )}
       </main>
-    </div>
+      </div>
+    </RoleGuard>
   );
 }

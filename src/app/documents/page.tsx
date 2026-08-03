@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { FileText, Printer, Building2, CheckCircle2 } from "lucide-react";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
+import { RoleGuard } from "@/components/Auth/RoleGuard";
 import PrintableDocument from "@/components/documents/PrintableDocument";
 import { createClient } from "@/lib/supabase/client";
 
@@ -188,7 +189,8 @@ function DocumentVaultContent() {
 
 export default function DocumentsPage() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <RoleGuard allowedRoles={["super_admin", "sales_rep", "finance_manager"]} moduleName="BIR Document Vault & Printable Records">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
 
@@ -219,6 +221,7 @@ export default function DocumentsPage() {
           <DocumentVaultContent />
         </Suspense>
       </main>
-    </div>
+      </div>
+    </RoleGuard>
   );
 }
