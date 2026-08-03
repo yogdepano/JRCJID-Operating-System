@@ -19,6 +19,7 @@ import {
   UserCheck
 } from "lucide-react";
 import { useUserRole, RoleCode } from "@/lib/auth/useUserRole";
+import { TopStatusProgress } from "@/components/Navigation/TopStatusProgress";
 
 interface NavItem {
   name: string;
@@ -95,6 +96,11 @@ export function TopNavbar() {
             );
           })}
         </nav>
+
+        {/* TOP MIDDLE CENTER OPERATIONAL STATUS PROGRESS PILL */}
+        <div className="shrink-0 flex items-center justify-center">
+          <TopStatusProgress />
+        </div>
 
         {/* USER ROLE BADGE & SECURITY DRAWER TOGGLE */}
         <div className="flex items-center gap-2 shrink-0">
