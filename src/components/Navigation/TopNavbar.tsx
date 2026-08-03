@@ -15,33 +15,52 @@ import {
   Bug,
   FileText,
   Menu,
-  X
+  X,
+  UserCheck
 } from "lucide-react";
+import { useUserRole, RoleCode } from "@/lib/auth/useUserRole";
 
-const mainDepartmentNav = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+  allowedRoles?: RoleCode[];
+}
+
+const mainDepartmentNav: NavItem[] = [
   { name: "Home", href: "/", icon: LayoutDashboard },
-  { name: "Sales", href: "/sales", icon: ShoppingCart },
-  { name: "Finance", href: "/finance", icon: DollarSign },
+  { name: "Sales", href: "/sales", icon: ShoppingCart, allowedRoles: ["super_admin", "sales_rep", "finance_manager"] },
+  { name: "Finance", href: "/finance", icon: DollarSign, allowedRoles: ["super_admin", "finance_manager"] },
   { name: "Marketing", href: "/products", icon: Target },
-  { name: "Production", href: "/recipes", icon: Factory },
-  { name: "Logistics", href: "/inventory", icon: Truck },
+  { name: "Production", href: "/recipes", icon: Factory, allowedRoles: ["super_admin", "production_manager"] },
+  { name: "Logistics", href: "/inventory", icon: Truck, allowedRoles: ["super_admin", "production_manager", "purchasing_officer", "logistics_driver"] },
 ];
 
-const secondaryNav = [
+const secondaryNav: NavItem[] = [
   { name: "Product Catalog Master", href: "/products", icon: Package },
-  { name: "Pest Control Dispatch", href: "/pest-control", icon: Bug },
-  { name: "User Security & RBAC", href: "/users", icon: ShieldCheck },
-  { name: "Document Vault (BIR)", href: "/documents", icon: FileText },
+  { name: "Pest Control Dispatch", href: "/pest-control", icon: Bug, allowedRoles: ["super_admin", "sales_rep", "pest_control_tech", "purchasing_officer", "logistics_driver"] },
+  { name: "User Security & RBAC", href: "/users", icon: ShieldCheck, allowedRoles: ["super_admin"] },
+  { name: "Document Vault (BIR)", href: "/documents", icon: FileText, allowedRoles: ["super_admin", "sales_rep", "finance_manager"] },
 ];
 
 export function TopNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { role, roleName, email } = useUserRole();
+
+  const isAllowed = (item: NavItem) => {
+    if (!item.allowedRoles) return true;
+    if (role === "super_admin") return true;
+    return role ? item.allowedRoles.includes(role) : false;
+  };
+
+  const visibleMainNav = mainDepartmentNav.filter(isAllowed);
+  const visibleSecondaryNav = secondaryNav.filter(isAllowed);
 
   return (
     <header className="sticky top-0 left-0 right-0 z-50 bg-white border-b-2 border-amber-400 shadow-md backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-3">
         {/* BRAND LOGO */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 via-blue-600 to-amber-400 p-[2px] shadow-md shadow-blue-500/20">
@@ -55,9 +74,9 @@ export function TopNavbar() {
           </div>
         </Link>
 
-        {/* STICKY MAIN DEPARTMENT NAVIGATION */}
+        {/* STICKY MAIN DEPARTMENT NAVIGATION - DYNAMICAL FILTERED BY ROLE */}
         <nav className="flex items-center gap-1 sm:gap-2 overflow-x-auto py-1 px-1 no-scrollbar">
-          {mainDepartmentNav.map((dept) => {
+          {visibleMainNav.map((dept) => {
             const Icon = dept.icon;
             const isActive = pathname === dept.href;
             return (
@@ -77,8 +96,13 @@ export function TopNavbar() {
           })}
         </nav>
 
-        {/* MORE / SECURITY DRAWER TOGGLE */}
+        {/* USER ROLE BADGE & SECURITY DRAWER TOGGLE */}
         <div className="flex items-center gap-2 shrink-0">
+          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-xs font-extrabold text-blue-900">
+            <UserCheck className="w-4 h-4 text-blue-700" />
+            <span>{roleName}</span>
+          </div>
+
           <button
             onClick={() => setIsDrawerOpen(!isDrawerOpen)}
             className="p-2 sm:px-3 sm:py-2 rounded-xl bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
@@ -100,12 +124,15 @@ export function TopNavbar() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-              <span className="text-xs font-extrabold text-blue-700 uppercase tracking-wider">All ERP Modules</span>
+              <div>
+                <span className="text-xs font-extrabold text-blue-700 uppercase tracking-wider block">Authorized Modules</span>
+                <span className="text-[10px] text-slate-500 font-bold block">{roleName} ({email || "User"})</span>
+              </div>
               <button onClick={() => setIsDrawerOpen(false)} className="text-slate-500 hover:text-slate-900 font-bold">✕</button>
             </div>
 
             <div className="space-y-1">
-              {secondaryNav.map((item) => {
+              {visibleSecondaryNav.map((item) => {
                 const Icon = item.icon;
                 return (
                   <button

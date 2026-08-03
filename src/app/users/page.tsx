@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { ShieldCheck, Plus, Search, UserCheck, Trash2, Edit3, UserPlus, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
+import { RoleGuard } from "@/components/Auth/RoleGuard";
 
 export interface SystemUser {
   id: string;
@@ -248,7 +249,8 @@ export default function UsersPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <RoleGuard allowedRoles={["super_admin"]} moduleName="User Security & RBAC">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
 
@@ -571,6 +573,7 @@ export default function UsersPage() {
           </div>
         )}
       </main>
-    </div>
+      </div>
+    </RoleGuard>
   );
 }

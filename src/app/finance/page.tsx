@@ -5,6 +5,7 @@ import { DollarSign, FileText, TrendingUp, Clock, CheckCircle2, ArrowRight, Sear
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
+import { RoleGuard } from "@/components/Auth/RoleGuard";
 
 interface InvoiceRecord {
   id: string;
@@ -106,7 +107,8 @@ export default function FinancePage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <RoleGuard allowedRoles={["super_admin", "finance_manager"]} moduleName="Finance & Accounts Receivable">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
 
@@ -260,6 +262,7 @@ export default function FinancePage() {
           </div>
         )}
       </main>
-    </div>
+      </div>
+    </RoleGuard>
   );
 }

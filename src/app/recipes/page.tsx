@@ -5,6 +5,7 @@ import { FlaskConical, Plus, Search, Scale, Factory, Trash2, Package } from "luc
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
+import { RoleGuard } from "@/components/Auth/RoleGuard";
 
 interface IngredientItem {
   raw_material_sku: string;
@@ -138,7 +139,8 @@ export default function RecipesPage() {
   const scalingMultiplier = selectedRecipe ? targetBatchQty / (selectedRecipe.batch_yield_qty || 1) : 1;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <RoleGuard allowedRoles={["super_admin", "production_manager"]} moduleName="Chemical BoM & Production Recipes">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
 
@@ -412,6 +414,7 @@ export default function RecipesPage() {
           </div>
         )}
       </main>
-    </div>
+      </div>
+    </RoleGuard>
   );
 }
