@@ -56,55 +56,53 @@ export function TopStatusProgress() {
   }, []);
 
   return (
-    <>
-      {/* PROMINENT, LARGE, ALWAYS-VISIBLE FLOATING TOP-CENTER STATUS BAR PILL */}
-      <div className="fixed top-2.5 left-1/2 -translate-x-1/2 z-[100] pointer-events-auto">
-        <button
-          onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-          className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-slate-950/95 text-white border-2 border-amber-400 shadow-2xl shadow-yellow-500/30 hover:bg-slate-900 hover:scale-105 transition-all active:scale-95 cursor-pointer text-xs sm:text-sm font-extrabold tracking-wide"
-          title="Live System Operational Progress (Click to Expand)"
-        >
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 animate-pulse" />
-            <span className="hidden md:inline text-amber-300 font-extrabold uppercase tracking-wider text-[11px]">System Status:</span>
-          </div>
-          
-          {/* PROMINENT STOPLIGHT STATUS LABELS */}
-          <div className="flex items-center gap-2.5 sm:gap-3.5">
-            {/* GREEN - SETTLED / COMPLETED */}
-            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/50">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400 animate-pulse"></span>
-              <span className="text-emerald-300 font-mono text-xs sm:text-sm font-bold">{metrics.settledOrders}</span>
-              <span className="hidden sm:inline text-[11px] text-emerald-200 font-bold uppercase tracking-tight">Settled</span>
-            </span>
+    <div className="relative inline-flex items-center justify-center">
+      {/* GLOSSY GLASSMORPHISM TOP-CENTER STATUS PILL */}
+      <button
+        onClick={() => setIsPopoverOpen(!isPopoverOpen)}
+        className="flex items-center gap-3 px-4 sm:px-5 py-1.5 rounded-full bg-slate-900/90 text-white border border-amber-400/80 shadow-lg shadow-yellow-500/10 hover:bg-slate-800 hover:scale-[1.02] transition-all active:scale-95 cursor-pointer text-xs sm:text-sm font-extrabold tracking-wide"
+        title="Live System Operational Progress (Click for Breakdown)"
+      >
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Activity className="w-4 h-4 text-amber-400 animate-pulse" />
+          <span className="hidden sm:inline text-amber-300 font-extrabold uppercase tracking-wider text-[11px]">System Status:</span>
+        </div>
+        
+        {/* STOPLIGHT STATUS INDICATORS MATCHING MOCKUP */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* GREEN - SETTLED / COMPLETED */}
+          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-950/90 border border-emerald-500/60">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400"></span>
+            <span className="text-emerald-300 font-mono text-xs sm:text-sm font-bold">{metrics.settledOrders}</span>
+            <span className="hidden md:inline text-[10px] text-emerald-200 font-bold uppercase tracking-wider">Settled</span>
+          </span>
 
-            <span className="text-slate-600 font-normal">|</span>
+          <span className="text-slate-600 font-normal">|</span>
 
-            {/* ORANGE - IN PROGRESS */}
-            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-950/80 border border-orange-500/50">
-              <span className="w-2.5 h-2.5 rounded-full bg-orange-400 shadow-sm shadow-orange-400 animate-ping"></span>
-              <span className="text-orange-300 font-mono text-xs sm:text-sm font-bold">{metrics.inProgressOrders}</span>
-              <span className="hidden sm:inline text-[11px] text-orange-200 font-bold uppercase tracking-tight">Active</span>
-            </span>
+          {/* ORANGE - IN PROGRESS */}
+          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-orange-950/90 border border-orange-500/60">
+            <span className="w-2.5 h-2.5 rounded-full bg-orange-400 shadow-sm shadow-orange-400 animate-pulse"></span>
+            <span className="text-orange-300 font-mono text-xs sm:text-sm font-bold">{metrics.inProgressOrders}</span>
+            <span className="hidden md:inline text-[10px] text-orange-200 font-bold uppercase tracking-wider">In Progress</span>
+          </span>
 
-            <span className="text-slate-600 font-normal">|</span>
+          <span className="text-slate-600 font-normal">|</span>
 
-            {/* RED - ATTENTION REQUIRED */}
-            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-950/80 border border-rose-500/50">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500"></span>
-              <span className="text-rose-300 font-mono text-xs sm:text-sm font-bold">{metrics.attentionRequired}</span>
-              <span className="hidden sm:inline text-[11px] text-rose-200 font-bold uppercase tracking-tight">Alert</span>
-            </span>
-          </div>
+          {/* RED - ATTENTION REQUIRED */}
+          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-950/90 border border-rose-500/60">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500"></span>
+            <span className="text-rose-300 font-mono text-xs sm:text-sm font-bold">{metrics.attentionRequired}</span>
+            <span className="hidden md:inline text-[10px] text-rose-200 font-bold uppercase tracking-wider">Alert</span>
+          </span>
+        </div>
 
-          <ChevronDown className={`w-4 h-4 text-amber-400 transition-transform duration-200 ${isPopoverOpen ? "rotate-180" : ""}`} />
-        </button>
-      </div>
+        <ChevronDown className={`w-3.5 h-3.5 text-amber-400 transition-transform duration-200 ${isPopoverOpen ? "rotate-180" : ""}`} />
+      </button>
 
       {/* DETAILED OPERATIONAL POPOVER */}
       {isPopoverOpen && (
         <div
-          className="fixed inset-0 z-[110] bg-slate-950/40 backdrop-blur-xs flex justify-center items-start pt-16 p-4"
+          className="fixed inset-0 z-[110] bg-slate-950/40 backdrop-blur-xs flex justify-center items-start pt-14 p-4"
           onClick={() => setIsPopoverOpen(false)}
         >
           <div
@@ -164,11 +162,11 @@ export function TopStatusProgress() {
             </div>
 
             <div className="text-[11px] text-center text-slate-500 font-extrabold border-t border-slate-100 pt-2.5">
-              Stoplight Progress Status • Always Visible Center-Top
+              Stoplight Progress Status • Visible Top-Center Across All Pages
             </div>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
