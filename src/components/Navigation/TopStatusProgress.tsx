@@ -56,99 +56,119 @@ export function TopStatusProgress() {
   }, []);
 
   return (
-    <div className="relative inline-flex items-center">
-      {/* FLOATING TOP-CENTER STATUS PILL */}
-      <button
-        onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-        className="flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-slate-950/90 text-white border-2 border-amber-400/80 shadow-lg shadow-yellow-500/10 hover:bg-slate-900 transition-all active:scale-95 cursor-pointer text-xs font-extrabold"
-        title="Live System Operational Progress"
-      >
-        <Activity className="w-3.5 h-3.5 text-amber-400 animate-pulse shrink-0" />
-        
-        {/* STOPLIGHT STATUS DOTS */}
-        <div className="flex items-center gap-2">
-          {/* GREEN - SETTLED / COMPLETED */}
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>
-            <span className="text-emerald-400 font-mono">{metrics.settledOrders}</span>
-          </span>
+    <>
+      {/* PROMINENT, LARGE, ALWAYS-VISIBLE FLOATING TOP-CENTER STATUS BAR PILL */}
+      <div className="fixed top-2.5 left-1/2 -translate-x-1/2 z-[100] pointer-events-auto">
+        <button
+          onClick={() => setIsPopoverOpen(!isPopoverOpen)}
+          className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-slate-950/95 text-white border-2 border-amber-400 shadow-2xl shadow-yellow-500/30 hover:bg-slate-900 hover:scale-105 transition-all active:scale-95 cursor-pointer text-xs sm:text-sm font-extrabold tracking-wide"
+          title="Live System Operational Progress (Click to Expand)"
+        >
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 animate-pulse" />
+            <span className="hidden md:inline text-amber-300 font-extrabold uppercase tracking-wider text-[11px]">System Status:</span>
+          </div>
+          
+          {/* PROMINENT STOPLIGHT STATUS LABELS */}
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            {/* GREEN - SETTLED / COMPLETED */}
+            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/50">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400 animate-pulse"></span>
+              <span className="text-emerald-300 font-mono text-xs sm:text-sm font-bold">{metrics.settledOrders}</span>
+              <span className="hidden sm:inline text-[11px] text-emerald-200 font-bold uppercase tracking-tight">Settled</span>
+            </span>
 
-          <span className="text-slate-600 font-normal">|</span>
+            <span className="text-slate-600 font-normal">|</span>
 
-          {/* ORANGE - IN PROGRESS */}
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shadow-sm shadow-orange-500/50"></span>
-            <span className="text-orange-400 font-mono">{metrics.inProgressOrders}</span>
-          </span>
+            {/* ORANGE - IN PROGRESS */}
+            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-950/80 border border-orange-500/50">
+              <span className="w-2.5 h-2.5 rounded-full bg-orange-400 shadow-sm shadow-orange-400 animate-ping"></span>
+              <span className="text-orange-300 font-mono text-xs sm:text-sm font-bold">{metrics.inProgressOrders}</span>
+              <span className="hidden sm:inline text-[11px] text-orange-200 font-bold uppercase tracking-tight">Active</span>
+            </span>
 
-          <span className="text-slate-600 font-normal">|</span>
+            <span className="text-slate-600 font-normal">|</span>
 
-          {/* RED - ATTENTION REQUIRED */}
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"></span>
-            <span className="text-rose-400 font-mono">{metrics.attentionRequired}</span>
-          </span>
-        </div>
+            {/* RED - ATTENTION REQUIRED */}
+            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-950/80 border border-rose-500/50">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500"></span>
+              <span className="text-rose-300 font-mono text-xs sm:text-sm font-bold">{metrics.attentionRequired}</span>
+              <span className="hidden sm:inline text-[11px] text-rose-200 font-bold uppercase tracking-tight">Alert</span>
+            </span>
+          </div>
 
-        <ChevronDown className={`w-3.5 h-3.5 text-amber-400 transition-transform duration-200 ${isPopoverOpen ? "rotate-180" : ""}`} />
-      </button>
+          <ChevronDown className={`w-4 h-4 text-amber-400 transition-transform duration-200 ${isPopoverOpen ? "rotate-180" : ""}`} />
+        </button>
+      </div>
 
       {/* DETAILED OPERATIONAL POPOVER */}
       {isPopoverOpen && (
         <div
-          className="fixed inset-0 z-40"
+          className="fixed inset-0 z-[110] bg-slate-950/40 backdrop-blur-xs flex justify-center items-start pt-16 p-4"
           onClick={() => setIsPopoverOpen(false)}
         >
           <div
-            className="absolute top-16 left-1/2 -translate-x-1/2 w-80 bg-white border-2 border-blue-600 rounded-2xl p-4 space-y-3 shadow-2xl z-50 text-slate-900 font-sans"
+            className="w-full max-w-sm bg-white border-2 border-blue-600 rounded-2xl p-5 space-y-4 shadow-2xl text-slate-900 font-sans"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <div className="flex items-center gap-1.5">
-                <TrendingUp className="w-4 h-4 text-blue-700" />
-                <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Operational Pipeline Progress</span>
+            <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-blue-700" />
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">Operational Progress Live Summary</h3>
+                  <p className="text-[10px] text-slate-500 font-semibold">Real-time indicators across ERP departments</p>
+                </div>
               </div>
               <button
                 onClick={fetchStatus}
-                className="p-1 text-slate-400 hover:text-blue-700"
+                className="p-1.5 text-slate-400 hover:text-blue-700 rounded-lg hover:bg-blue-50"
                 title="Refresh Status"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-blue-600" : ""}`} />
               </button>
             </div>
 
-            <div className="space-y-2 text-xs">
-              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+            <div className="space-y-2.5 text-xs">
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span className="font-bold text-slate-800">Settled / Completed</span>
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  <div>
+                    <span className="font-extrabold text-slate-900 block">Settled / Completed Orders</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Sales orders fulfilled & paid</span>
+                  </div>
                 </div>
-                <span className="font-mono font-extrabold text-emerald-700 text-sm">{metrics.settledOrders} Orders</span>
+                <span className="font-mono font-extrabold text-emerald-700 text-base">{metrics.settledOrders}</span>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-orange-600" />
-                  <span className="font-bold text-slate-800">In Production / Active</span>
+                  <Clock className="w-5 h-5 text-orange-600" />
+                  <div>
+                    <span className="font-extrabold text-slate-900 block">In Production & Active Operations</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Batches in mixing & dispatch</span>
+                  </div>
                 </div>
-                <span className="font-mono font-extrabold text-orange-700 text-sm">{metrics.inProgressOrders} Active</span>
+                <span className="font-mono font-extrabold text-orange-700 text-base">{metrics.inProgressOrders}</span>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-600" />
-                  <span className="font-bold text-slate-800">Low Stock / Attention</span>
+                  <AlertTriangle className="w-5 h-5 text-rose-600" />
+                  <div>
+                    <span className="font-extrabold text-slate-900 block">Low Stock / Material Alerts</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Chemical reorder points triggered</span>
+                  </div>
                 </div>
-                <span className="font-mono font-extrabold text-rose-700 text-sm">{metrics.attentionRequired} Items</span>
+                <span className="font-mono font-extrabold text-rose-700 text-base">{metrics.attentionRequired}</span>
               </div>
             </div>
 
-            <div className="text-[10px] text-center text-slate-400 font-semibold border-t border-slate-100 pt-2">
-              Stoplight Progress Status • Updates Live across ERP
+            <div className="text-[11px] text-center text-slate-500 font-extrabold border-t border-slate-100 pt-2.5">
+              Stoplight Progress Status • Always Visible Center-Top
             </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
