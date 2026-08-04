@@ -123,34 +123,46 @@ export function useUnifiedOrders() {
   useEffect(() => {
     loadOrders();
 
-    const supabase = createClient();
-    const channel = supabase
-      .channel("realtime_sales_orders")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "sales_orders" },
-        (payload) => {
-          if (payload.eventType === "DELETE") {
-            const deletedId = payload.old?.id || payload.old?.order_number;
-            if (deletedId) {
-              addDeletedOrderId(deletedId);
-              setOrders((prev) => {
-                const filtered = prev.filter((o) => o.id !== deletedId && o.order_number !== deletedId);
-                try {
-                  localStorage.setItem(LOCAL_STORAGE_UNIFIED_KEY, JSON.stringify(filtered));
-                } catch (e) {}
-                return filtered;
-              });
+    const uniqueChannelId = `realtime_so_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    let channel: any = null;
+
+    try {
+      const supabase = createClient();
+      channel = supabase
+        .channel(uniqueChannelId)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "sales_orders" },
+          (payload) => {
+            if (payload.eventType === "DELETE") {
+              const deletedId = payload.old?.id || payload.old?.order_number;
+              if (deletedId) {
+                addDeletedOrderId(deletedId);
+                setOrders((prev) => {
+                  const filtered = prev.filter((o) => o.id !== deletedId && o.order_number !== deletedId);
+                  try {
+                    localStorage.setItem(LOCAL_STORAGE_UNIFIED_KEY, JSON.stringify(filtered));
+                  } catch (e) {}
+                  return filtered;
+                });
+              }
+            } else {
+              loadOrders();
             }
-          } else {
-            loadOrders();
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    } catch (err) {
+      console.error("Notice setting up realtime subscription:", err);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        try {
+          const supabase = createClient();
+          supabase.removeChannel(channel);
+        } catch (e) {}
+      }
     };
   }, []);
 
