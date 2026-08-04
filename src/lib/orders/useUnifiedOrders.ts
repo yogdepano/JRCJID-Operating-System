@@ -5,6 +5,7 @@ import { UnifiedOrder, Department, OrderStatus, TimelineEvent, MaterialRequisiti
 import { createClient } from "@/lib/supabase/client";
 
 const LOCAL_STORAGE_UNIFIED_KEY = "jrc_unified_orders_v2";
+const LOCAL_STORAGE_DELETED_KEY = "jrc_deleted_order_ids_v1";
 
 const INITIAL_DEMO_ORDERS: UnifiedOrder[] = [
   {
@@ -56,6 +57,28 @@ const INITIAL_DEMO_ORDERS: UnifiedOrder[] = [
   },
 ];
 
+const getDeletedOrderIds = (): string[] => {
+  try {
+    const stored = localStorage.getItem(LOCAL_STORAGE_DELETED_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const addDeletedOrderId = (idOrNum: string) => {
+  if (!idOrNum) return;
+  try {
+    const deleted = getDeletedOrderIds();
+    if (!deleted.includes(idOrNum)) {
+      const updated = [...deleted, idOrNum];
+      localStorage.setItem(LOCAL_STORAGE_DELETED_KEY, JSON.stringify(updated));
+    }
+  } catch (e) {
+    console.error("Error saving deleted order id:", e);
+  }
+};
+
 export function useUnifiedOrders() {
   const [orders, setOrders] = useState<UnifiedOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,18 +86,26 @@ export function useUnifiedOrders() {
   const loadOrders = async () => {
     setLoading(true);
     let currentOrders: UnifiedOrder[] = [];
+    const deletedIds = getDeletedOrderIds();
 
     try {
       const cached = localStorage.getItem(LOCAL_STORAGE_UNIFIED_KEY);
       if (cached) {
-        currentOrders = JSON.parse(cached);
+        const parsed: UnifiedOrder[] = JSON.parse(cached);
+        currentOrders = parsed.filter(
+          (o) => !deletedIds.includes(o.id) && !deletedIds.includes(o.order_number)
+        );
       } else {
-        currentOrders = INITIAL_DEMO_ORDERS;
-        localStorage.setItem(LOCAL_STORAGE_UNIFIED_KEY, JSON.stringify(INITIAL_DEMO_ORDERS));
+        currentOrders = INITIAL_DEMO_ORDERS.filter(
+          (o) => !deletedIds.includes(o.id) && !deletedIds.includes(o.order_number)
+        );
+        localStorage.setItem(LOCAL_STORAGE_UNIFIED_KEY, JSON.stringify(currentOrders));
       }
     } catch (e) {
       console.error("Local storage read error:", e);
-      currentOrders = INITIAL_DEMO_ORDERS;
+      currentOrders = INITIAL_DEMO_ORDERS.filter(
+        (o) => !deletedIds.includes(o.id) && !deletedIds.includes(o.order_number)
+      );
     }
 
     try {
@@ -85,7 +116,11 @@ export function useUnifiedOrders() {
         .order("created_at", { ascending: false });
 
       if (dbOrders && dbOrders.length > 0) {
-        const remoteMapped: UnifiedOrder[] = dbOrders.map((so: any) => {
+        const validDbOrders = dbOrders.filter(
+          (so: any) => !deletedIds.includes(so.id) && !deletedIds.includes(so.order_number)
+        );
+
+        const remoteMapped: UnifiedOrder[] = validDbOrders.map((so: any) => {
           const matchedLocal = currentOrders.find((o) => o.order_number === so.order_number || o.id === so.id);
           if (matchedLocal) return matchedLocal;
 
@@ -122,8 +157,16 @@ export function useUnifiedOrders() {
         });
 
         const map = new Map<string, UnifiedOrder>();
-        currentOrders.forEach((o) => map.set(o.order_number, o));
-        remoteMapped.forEach((o) => map.set(o.order_number, o));
+        currentOrders.forEach((o) => {
+          if (!deletedIds.includes(o.id) && !deletedIds.includes(o.order_number)) {
+            map.set(o.order_number, o);
+          }
+        });
+        remoteMapped.forEach((o) => {
+          if (!deletedIds.includes(o.id) && !deletedIds.includes(o.order_number)) {
+            map.set(o.order_number, o);
+          }
+        });
         currentOrders = Array.from(map.values());
       }
     } catch (err) {
@@ -136,6 +179,36 @@ export function useUnifiedOrders() {
 
   useEffect(() => {
     loadOrders();
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel("realtime_sales_orders")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sales_orders" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const deletedId = payload.old?.id || payload.old?.order_number;
+            if (deletedId) {
+              addDeletedOrderId(deletedId);
+              setOrders((prev) => {
+                const filtered = prev.filter((o) => o.id !== deletedId && o.order_number !== deletedId);
+                try {
+                  localStorage.setItem(LOCAL_STORAGE_UNIFIED_KEY, JSON.stringify(filtered));
+                } catch (e) {}
+                return filtered;
+              });
+            }
+          } else {
+            loadOrders();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const saveOrders = (updated: UnifiedOrder[]) => {
@@ -289,6 +362,14 @@ export function useUnifiedOrders() {
   };
 
   const deleteOrder = async (orderId: string, employeeName: string) => {
+    const targetOrder = orders.find((o) => o.id === orderId || o.order_number === orderId);
+    if (targetOrder) {
+      addDeletedOrderId(targetOrder.id);
+      addDeletedOrderId(targetOrder.order_number);
+    } else {
+      addDeletedOrderId(orderId);
+    }
+
     const updated = orders.filter((o) => o.id !== orderId && o.order_number !== orderId);
     saveOrders(updated);
 
