@@ -201,62 +201,62 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
   };
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-3 font-sans">
       {/* TASK FILTER TABS */}
-      <div className="bg-white p-2 sm:p-3 rounded-2xl border-2 border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto no-scrollbar">
+      <div className="bg-white p-1.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="flex items-center gap-1 w-full sm:w-auto overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveTab("waiting")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all whitespace-nowrap ${
               activeTab === "waiting"
-                ? "bg-blue-700 text-white shadow-md shadow-blue-600/30 ring-2 ring-amber-400"
+                ? "bg-blue-700 text-white shadow-xs ring-1 ring-amber-400"
                 : "text-slate-700 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            <span>📬 Orders Waiting for Me</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${activeTab === "waiting" ? "bg-amber-400 text-slate-950" : "bg-slate-200 text-slate-800"}`}>
+            <span>📫 Orders Waiting for Me</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[11px] font-mono font-bold ${activeTab === "waiting" ? "bg-amber-400 text-slate-950" : "bg-slate-200 text-slate-800"}`}>
               {waitingCount}
             </span>
           </button>
 
           <button
             onClick={() => setActiveTab("in_progress")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all whitespace-nowrap ${
               activeTab === "in_progress"
-                ? "bg-blue-700 text-white shadow-md shadow-blue-600/30 ring-2 ring-amber-400"
+                ? "bg-blue-700 text-white shadow-xs ring-1 ring-amber-400"
                 : "text-slate-700 hover:bg-slate-100 border border-slate-200"
             }`}
           >
             <span>⏳ Orders In Progress</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${activeTab === "in_progress" ? "bg-amber-400 text-slate-950" : "bg-slate-200 text-slate-800"}`}>
+            <span className={`px-1.5 py-0.2 rounded-full text-[11px] font-mono font-bold ${activeTab === "in_progress" ? "bg-amber-400 text-slate-950" : "bg-slate-200 text-slate-800"}`}>
               {inProgressCount}
             </span>
           </button>
 
           <button
             onClick={() => setActiveTab("completed")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all whitespace-nowrap ${
               activeTab === "completed"
-                ? "bg-blue-700 text-white shadow-md shadow-blue-600/30 ring-2 ring-amber-400"
+                ? "bg-blue-700 text-white shadow-xs ring-1 ring-amber-400"
                 : "text-slate-700 hover:bg-slate-100 border border-slate-200"
             }`}
           >
             <span>✅ Completed & Closed</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${activeTab === "completed" ? "bg-amber-400 text-slate-950" : "bg-slate-200 text-slate-800"}`}>
+            <span className={`px-1.5 py-0.2 rounded-full text-[11px] font-mono font-bold ${activeTab === "completed" ? "bg-amber-400 text-slate-950" : "bg-slate-200 text-slate-800"}`}>
               {completedCount}
             </span>
           </button>
         </div>
 
         {/* SEARCH BAR */}
-        <div className="relative w-full sm:w-64">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="relative w-full sm:w-56">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Search order # or client..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs text-slate-900 font-semibold focus:outline-none focus:border-blue-600"
+            className="w-full pl-8 pr-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 font-semibold focus:outline-none focus:border-blue-600"
           />
         </div>
       </div>
@@ -283,7 +283,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filteredOrders.map((o) => {
             const isMyTurn =
               activeDepartment === "Admin" ||
@@ -296,48 +296,48 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
             return (
               <div
                 key={o.id}
-                className={`p-5 rounded-2xl border-2 space-y-4 shadow-sm transition-all bg-white ${
-                  isMyTurn ? "border-amber-400 ring-2 ring-amber-400/30" : "border-slate-200"
+                className={`p-3.5 rounded-xl border space-y-2.5 shadow-2xs transition-all bg-white ${
+                  isMyTurn ? "border-amber-400 ring-1 ring-amber-400/40" : "border-slate-200"
                 }`}
               >
                 {/* CARD HEADER: STATUS & RESPONSIBILITY BADGES */}
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-slate-100 pb-3">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
                   <div>
-                    <span className="font-mono text-sm font-extrabold text-blue-700 block">{o.order_number}</span>
-                    <span className="text-xs font-bold text-slate-900">{o.customer_name}</span>
+                    <span className="font-mono text-xs font-extrabold text-blue-700 block leading-tight">{o.order_number}</span>
+                    <span className="text-xs font-bold text-slate-900 truncate block max-w-[200px]">{o.customer_name}</span>
                   </div>
 
-                  <div className="text-right">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Responsible Dept</span>
-                    <span className="inline-block px-3 py-1 rounded-full bg-blue-900 text-amber-300 font-extrabold text-xs shadow-xs">
+                  <div className="text-right shrink-0">
+                    <span className="text-[9px] uppercase font-extrabold text-slate-400 block leading-none mb-0.5">Responsible Dept</span>
+                    <span className="inline-block px-2 py-0.5 rounded-md bg-blue-900 text-amber-300 font-extrabold text-[11px] shadow-2xs">
                       {o.current_department_responsible}
                     </span>
                   </div>
                 </div>
 
                 {/* STATUS BAR & DETAILS */}
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                <div className="p-2 rounded-lg bg-slate-50 border border-slate-200 space-y-1 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-600">Current Status:</span>
-                    <span className="font-extrabold text-blue-800 bg-blue-100 px-2.5 py-0.5 rounded-md border border-blue-200">
+                    <span className="font-bold text-slate-500 text-[11px]">Current Status:</span>
+                    <span className="font-extrabold text-blue-800 bg-blue-100 px-2 py-0.2 rounded border border-blue-200 text-[11px]">
                       {o.current_status}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between font-mono">
-                    <span className="text-slate-500 font-medium">Grand Total:</span>
-                    <span className="font-extrabold text-slate-900 text-sm">
+                    <span className="text-slate-500 font-medium text-[11px]">Grand Total:</span>
+                    <span className="font-extrabold text-slate-900 text-xs">
                       ₱{o.grand_total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                   </div>
 
                   {o.delivery_address && (
-                    <div className="text-[11px] text-slate-600 font-medium truncate">
-                      📍 Delivery Address: <span className="font-bold text-slate-800">{o.delivery_address}</span>
+                    <div className="text-[10px] text-slate-600 font-medium truncate">
+                      📍 <span className="font-bold text-slate-800">{o.delivery_address}</span>
                     </div>
                   )}
 
-                  <div className="text-[10px] text-slate-400 font-medium flex items-center justify-between pt-1 border-t border-slate-200/60">
+                  <div className="text-[9px] text-slate-400 font-medium flex items-center justify-between pt-0.5 border-t border-slate-200/60">
                     <span>Updated by: <strong className="text-slate-700">{o.last_updated_by}</strong></span>
                     <span>{o.last_updated_time}</span>
                   </div>
@@ -345,11 +345,11 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
 
                 {/* ORDERED LINE ITEMS PREVIEW */}
                 {o.items && o.items.length > 0 && (
-                  <div className="p-2.5 rounded-xl bg-blue-50/60 border border-blue-200 text-xs space-y-1">
-                    <span className="text-[10px] font-extrabold text-blue-800 uppercase block">Ordered Products:</span>
+                  <div className="p-2 rounded-lg bg-blue-50/60 border border-blue-200 text-[11px] space-y-0.5">
+                    <span className="text-[9px] font-extrabold text-blue-800 uppercase block">Ordered Products:</span>
                     {o.items.map((it, idx) => (
                       <div key={idx} className="flex justify-between font-semibold text-slate-800">
-                        <span className="truncate max-w-[200px]">{it.product_name}</span>
+                        <span className="truncate max-w-[180px]">{it.product_name}</span>
                         <span className="font-mono text-blue-700 font-bold">{it.qty} {it.uom}</span>
                       </div>
                     ))}
