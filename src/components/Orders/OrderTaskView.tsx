@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { UnifiedOrder, Department, OrderStatus, MaterialRequisitionItem } from "@/lib/orders/types";
+import { UnifiedOrder, Department, OrderStatus, MaterialRequisitionItem, OrderLineItem } from "@/lib/orders/types";
 import { useUnifiedOrders } from "@/lib/orders/useUnifiedOrders";
+import { useUserRole } from "@/lib/auth/useUserRole";
 import { OrderTimelineDrawer } from "@/components/Orders/OrderTimelineDrawer";
 import {
   Clock,
@@ -22,7 +23,9 @@ import {
   ShoppingCart,
   Boxes,
   DollarSign,
-  Trash2
+  Trash2,
+  Pencil,
+  ShieldCheck
 } from "lucide-react";
 import Link from "next/link";
 
@@ -33,8 +36,33 @@ interface OrderTaskViewProps {
 
 const LOCAL_STORAGE_PRODUCTS_KEY = "jrc_product_catalog_cache_v1";
 
+const ALL_STATUS_OPTIONS: OrderStatus[] = [
+  "Waiting for Sales",
+  "Waiting for Production",
+  "In Production",
+  "Waiting for Finance",
+  "Waiting for Logistics",
+  "Waiting for Marketing",
+  "Materials Being Purchased",
+  "Ready for Delivery",
+  "Delivered",
+  "Completed",
+  "Cancelled",
+];
+
+const ALL_DEPARTMENT_OPTIONS: Department[] = [
+  "Sales",
+  "Production",
+  "Finance",
+  "Logistics",
+  "Marketing",
+];
+
 export function OrderTaskView({ activeDepartment, employeeName = "Internal Employee" }: OrderTaskViewProps) {
-  const { orders, loading, transitionOrder, requestMaterials, requestDepartment } = useUnifiedOrders();
+  const { orders, loading, transitionOrder, requestMaterials, requestDepartment, deleteOrder, updateOrder } = useUnifiedOrders();
+  const { role } = useUserRole();
+  const isSuperAdmin = role === "super_admin" || activeDepartment === "Admin";
+
   const [activeTab, setActiveTab] = useState<"waiting" | "in_progress" | "completed">("waiting");
   const [selectedOrderForTimeline, setSelectedOrderForTimeline] = useState<UnifiedOrder | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,6 +80,16 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
   const [materialModalOrder, setMaterialModalOrder] = useState<UnifiedOrder | null>(null);
   const [requisitionItems, setRequisitionItems] = useState<MaterialRequisitionItem[]>([]);
   const [requisitionNotes, setRequisitionNotes] = useState("");
+
+  // Super Admin Edit Order Modal State
+  const [editModalOrder, setEditModalOrder] = useState<UnifiedOrder | null>(null);
+  const [editCustomerName, setEditCustomerName] = useState("");
+  const [editClientPoRef, setEditClientPoRef] = useState("");
+  const [editDeliveryAddress, setEditDeliveryAddress] = useState("");
+  const [editPaymentTerms, setEditPaymentTerms] = useState("");
+  const [editStatus, setEditStatus] = useState<OrderStatus>("Waiting for Production");
+  const [editDept, setEditDept] = useState<Department>("Production");
+  const [editLineItems, setEditLineItems] = useState<OrderLineItem[]>([]);
 
   useEffect(() => {
     try {
@@ -198,6 +236,52 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
     setRequestModalOrder(null);
     setRequestReason("");
     setRequestNotes("");
+  };
+
+  // Super Admin Master Control Handlers
+  const handleOpenEditModal = (order: UnifiedOrder) => {
+    setEditModalOrder(order);
+    setEditCustomerName(order.customer_name);
+    setEditClientPoRef(order.client_po_ref);
+    setEditDeliveryAddress(order.delivery_address || "");
+    setEditPaymentTerms(order.payment_terms || "NET 30 Days");
+    setEditStatus(order.current_status);
+    setEditDept(order.current_department_responsible);
+    setEditLineItems(order.items || []);
+  };
+
+  const handleDeleteOrder = (order: UnifiedOrder) => {
+    if (window.confirm(`Are you sure you want to permanently delete order "${order.order_number}" (${order.customer_name})? This cannot be undone.`)) {
+      deleteOrder(order.id, employeeName || "Super Admin");
+    }
+  };
+
+  const handleSaveEditOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModalOrder) return;
+
+    const subtotal = editLineItems.reduce((sum, item) => sum + item.total_price, 0);
+    const vat = subtotal * 0.12;
+    const grandTotal = subtotal + vat;
+
+    updateOrder(
+      editModalOrder.id,
+      {
+        customer_name: editCustomerName,
+        client_po_ref: editClientPoRef,
+        delivery_address: editDeliveryAddress,
+        payment_terms: editPaymentTerms,
+        current_status: editStatus,
+        current_department_responsible: editDept,
+        items: editLineItems,
+        subtotal,
+        vat_amount: vat,
+        grand_total: grandTotal,
+      },
+      employeeName || "Super Admin"
+    );
+
+    setEditModalOrder(null);
   };
 
   return (
@@ -629,6 +713,36 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                   </div>
                 )}
 
+                {/* SUPER ADMIN OVERRIDE CONTROL BAR */}
+                {isSuperAdmin && (
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5 bg-amber-50/60 p-1.5 rounded-lg border border-amber-200/80">
+                    <div className="flex items-center gap-1 text-[10px] font-extrabold text-amber-900">
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>Super Admin Master Control</span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleOpenEditModal(o)}
+                        className="px-2 py-0.5 rounded-md bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 font-extrabold text-[10px] flex items-center gap-1 shadow-2xs active:scale-95 transition-all"
+                        title="Edit customer, status, department, and items for this order"
+                      >
+                        <Pencil className="w-3 h-3 text-slate-950" />
+                        <span>Edit</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteOrder(o)}
+                        className="px-2 py-0.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-[10px] flex items-center gap-1 shadow-2xs active:scale-95 transition-all"
+                        title="Permanently delete this order from the system"
+                      >
+                        <Trash2 className="w-3 h-3 text-white" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* CARD FOOTER: TIMELINE LIGHTBOX & OFFICIAL DOCUMENTS */}
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                   <button
@@ -872,6 +986,116 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                   className="px-4 py-2 rounded-xl bg-blue-700 hover:bg-blue-600 text-white font-extrabold shadow-sm"
                 >
                   Send Request
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* SUPER ADMIN EDIT ORDER MASTER MODAL */}
+      {editModalOrder && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white border-2 border-amber-500 rounded-2xl w-full max-w-2xl p-5 sm:p-6 space-y-4 shadow-2xl my-auto">
+            <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+              <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-amber-600" />
+                <span>Super Admin Master Edit ({editModalOrder.order_number})</span>
+              </h3>
+              <button onClick={() => setEditModalOrder(null)} className="text-slate-400 hover:text-slate-900 font-bold text-lg">
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditOrder} className="space-y-4 text-xs sm:text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-slate-800 font-extrabold block mb-1">Customer Account Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editCustomerName}
+                    onChange={(e) => setEditCustomerName(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-800 font-extrabold block mb-1">Client PO # Reference</label>
+                  <input
+                    type="text"
+                    value={editClientPoRef}
+                    onChange={(e) => setEditClientPoRef(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono text-slate-900 font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-800 font-extrabold block mb-1">Payment Terms</label>
+                  <input
+                    type="text"
+                    value={editPaymentTerms}
+                    onChange={(e) => setEditPaymentTerms(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs text-slate-900 font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-800 font-extrabold block mb-1">Current Order Status</label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as OrderStatus)}
+                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-bold text-slate-900"
+                  >
+                    {ALL_STATUS_OPTIONS.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-slate-800 font-extrabold block mb-1">Responsible Department</label>
+                  <select
+                    value={editDept}
+                    onChange={(e) => setEditDept(e.target.value as Department)}
+                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-bold text-slate-900"
+                  >
+                    {ALL_DEPARTMENT_OPTIONS.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-800 font-extrabold block mb-1">Delivery Address</label>
+                <input
+                  type="text"
+                  value={editDeliveryAddress}
+                  onChange={(e) => setEditDeliveryAddress(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs text-slate-900 font-semibold"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditModalOrder(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-extrabold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 text-xs font-extrabold shadow-md"
+                >
+                  Save Master Changes
                 </button>
               </div>
             </form>

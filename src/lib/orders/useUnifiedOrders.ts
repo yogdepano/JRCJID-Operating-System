@@ -288,6 +288,62 @@ export function useUnifiedOrders() {
     transitionOrder(orderId, nextStatus, targetDepartment, `Requested ${targetDepartment}: ${requestReason}`, employeeName, notes);
   };
 
+  const deleteOrder = async (orderId: string, employeeName: string) => {
+    const updated = orders.filter((o) => o.id !== orderId && o.order_number !== orderId);
+    saveOrders(updated);
+
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("sales_orders")
+        .delete()
+        .or(`id.eq.${orderId},order_number.eq.${orderId}`);
+    } catch (err) {
+      console.error("Error deleting order from Supabase:", err);
+    }
+  };
+
+  const updateOrder = async (orderId: string, updatedFields: Partial<UnifiedOrder>, employeeName: string) => {
+    const now = new Date();
+    const timestampStr = `${now.toISOString().split("T")[0]} ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+
+    const updated = orders.map((o) => {
+      if (o.id !== orderId && o.order_number !== orderId) return o;
+
+      const newTimelineEvent: TimelineEvent = {
+        id: `timeline-${Date.now()}`,
+        timestamp: timestampStr,
+        employee_name: employeeName,
+        department: o.current_department_responsible,
+        action: "Master Edit (Super Admin)",
+        notes: `Order details updated by Super Admin ${employeeName}`,
+      };
+
+      return {
+        ...o,
+        ...updatedFields,
+        last_updated_by: employeeName,
+        last_updated_time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timeline: [newTimelineEvent, ...o.timeline],
+      };
+    });
+
+    saveOrders(updated);
+
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("sales_orders")
+        .update({
+          total_amount: updatedFields.grand_total,
+          status: updatedFields.current_status === "Completed" ? "COMPLETED" : "APPROVED",
+        })
+        .or(`id.eq.${orderId},order_number.eq.${orderId}`);
+    } catch (err) {
+      console.error("Error updating order in Supabase:", err);
+    }
+  };
+
   return {
     orders,
     loading,
@@ -295,6 +351,8 @@ export function useUnifiedOrders() {
     transitionOrder,
     requestMaterials,
     requestDepartment,
+    deleteOrder,
+    updateOrder,
     refreshOrders: loadOrders,
   };
 }
