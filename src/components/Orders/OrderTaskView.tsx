@@ -25,7 +25,8 @@ import {
   DollarSign,
   Trash2,
   Pencil,
-  ShieldCheck
+  ShieldCheck,
+  RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 
@@ -59,7 +60,7 @@ const ALL_DEPARTMENT_OPTIONS: Department[] = [
 ];
 
 export function OrderTaskView({ activeDepartment, employeeName = "Internal Employee" }: OrderTaskViewProps) {
-  const { orders, loading, transitionOrder, requestMaterials, requestDepartment, deleteOrder, updateOrder } = useUnifiedOrders();
+  const { orders, loading, transitionOrder, requestMaterials, requestDepartment, deleteOrder, updateOrder, refreshOrders } = useUnifiedOrders();
   const { role } = useUserRole();
   const isSuperAdmin = role === "super_admin" || activeDepartment === "Admin";
 
@@ -332,16 +333,27 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
           </button>
         </div>
 
-        {/* SEARCH BAR */}
-        <div className="relative w-full sm:w-56">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search order # or client..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-8 pr-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 font-semibold focus:outline-none focus:border-blue-600"
-          />
+        {/* SEARCH BAR & SYNC BUTTON */}
+        <div className="flex items-center gap-1.5 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-56">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search order # or client..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-8 pr-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 font-semibold focus:outline-none focus:border-blue-600"
+            />
+          </div>
+
+          <button
+            onClick={() => refreshOrders()}
+            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 border border-slate-200 text-slate-700 hover:text-blue-700 font-extrabold text-xs flex items-center gap-1 shrink-0 active:scale-95 transition-all"
+            title="Force sync database orders across all devices"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden sm:inline">Sync DB</span>
+          </button>
         </div>
       </div>
 

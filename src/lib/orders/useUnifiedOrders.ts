@@ -4,58 +4,8 @@ import { useState, useEffect } from "react";
 import { UnifiedOrder, Department, OrderStatus, TimelineEvent, MaterialRequisitionItem } from "./types";
 import { createClient } from "@/lib/supabase/client";
 
-const LOCAL_STORAGE_UNIFIED_KEY = "jrc_unified_orders_v2";
-const LOCAL_STORAGE_DELETED_KEY = "jrc_deleted_order_ids_v1";
-
-const INITIAL_DEMO_ORDERS: UnifiedOrder[] = [
-  {
-    id: "so-demo-1001",
-    order_number: "PO-2026-1001",
-    customer_name: "Universal Sanitizers Corp.",
-    client_po_ref: "PO-USC-8890",
-    delivery_address: "12 Plant Road, Industrial Zone, Pasig City",
-    po_date: "2026-08-01",
-    delivery_date: "2026-08-10",
-    payment_terms: "NET 30 Days",
-    prepared_by: "Sales Representative",
-    current_status: "Waiting for Production",
-    current_department_responsible: "Production",
-    last_updated_by: "Winnie Sales",
-    last_updated_time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    items: [
-      {
-        id: "item-1",
-        product_sku: "RM-IA9-99",
-        product_name: "Isopropyl Alcohol 99%",
-        qty: 5,
-        uom: "Drum (200L)",
-        unit_price: 18500,
-        total_price: 92500,
-      },
-    ],
-    subtotal: 92500,
-    vat_amount: 11100,
-    grand_total: 103600,
-    timeline: [
-      {
-        id: "t-1",
-        timestamp: "2026-08-01 09:30 AM",
-        employee_name: "Winnie Sales",
-        department: "Sales",
-        action: "Order Created & Submitted",
-        notes: "Customer confirmed purchase order PO-USC-8890",
-      },
-      {
-        id: "t-2",
-        timestamp: "2026-08-01 09:32 AM",
-        employee_name: "System Auto-Router",
-        department: "Sales",
-        action: "Transmitted for Review",
-        notes: "Order automatically routed to Production for inventory check.",
-      },
-    ],
-  },
-];
+const LOCAL_STORAGE_UNIFIED_KEY = "jrc_unified_orders_v5";
+const LOCAL_STORAGE_DELETED_KEY = "jrc_deleted_order_ids_v2";
 
 const getDeletedOrderIds = (): string[] => {
   try {
@@ -88,26 +38,24 @@ export function useUnifiedOrders() {
     let currentOrders: UnifiedOrder[] = [];
     const deletedIds = getDeletedOrderIds();
 
+    // 1. Clean stale local caches
     try {
+      ["jrc_unified_orders_v1", "jrc_unified_orders_v2", "jrc_unified_orders_v3", "jrc_unified_orders_v4"].forEach(
+        (key) => localStorage.removeItem(key)
+      );
+
       const cached = localStorage.getItem(LOCAL_STORAGE_UNIFIED_KEY);
       if (cached) {
         const parsed: UnifiedOrder[] = JSON.parse(cached);
         currentOrders = parsed.filter(
           (o) => !deletedIds.includes(o.id) && !deletedIds.includes(o.order_number)
         );
-      } else {
-        currentOrders = INITIAL_DEMO_ORDERS.filter(
-          (o) => !deletedIds.includes(o.id) && !deletedIds.includes(o.order_number)
-        );
-        localStorage.setItem(LOCAL_STORAGE_UNIFIED_KEY, JSON.stringify(currentOrders));
       }
     } catch (e) {
       console.error("Local storage read error:", e);
-      currentOrders = INITIAL_DEMO_ORDERS.filter(
-        (o) => !deletedIds.includes(o.id) && !deletedIds.includes(o.order_number)
-      );
     }
 
+    // 2. Fetch ground truth from Supabase Database
     try {
       const supabase = createClient();
       const { data: dbOrders } = await supabase
@@ -115,7 +63,7 @@ export function useUnifiedOrders() {
         .select("*, customers(company_name, shipping_address, payment_terms)")
         .order("created_at", { ascending: false });
 
-      if (dbOrders && dbOrders.length > 0) {
+      if (dbOrders) {
         const validDbOrders = dbOrders.filter(
           (so: any) => !deletedIds.includes(so.id) && !deletedIds.includes(so.order_number)
         );
@@ -127,7 +75,7 @@ export function useUnifiedOrders() {
           return {
             id: so.id,
             order_number: so.order_number || `PO-2026-${so.id.slice(0, 4)}`,
-            customer_name: so.customers?.company_name || "Commercial Client",
+            customer_name: so.customers?.company_name || "Commercial Account",
             client_po_ref: "EMAIL-PO-ATTACHED",
             delivery_address: typeof so.customers?.shipping_address === "string" 
               ? so.customers.shipping_address 
@@ -156,24 +104,19 @@ export function useUnifiedOrders() {
           };
         });
 
-        const map = new Map<string, UnifiedOrder>();
-        currentOrders.forEach((o) => {
-          if (!deletedIds.includes(o.id) && !deletedIds.includes(o.order_number)) {
-            map.set(o.order_number, o);
-          }
-        });
-        remoteMapped.forEach((o) => {
-          if (!deletedIds.includes(o.id) && !deletedIds.includes(o.order_number)) {
-            map.set(o.order_number, o);
-          }
-        });
-        currentOrders = Array.from(map.values());
+        // Supabase database is master source of truth for list
+        currentOrders = remoteMapped.filter(
+          (o) => !deletedIds.includes(o.id) && !deletedIds.includes(o.order_number)
+        );
       }
     } catch (err) {
       console.error("Notice loading remote unified orders:", err);
     }
 
     setOrders(currentOrders);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_UNIFIED_KEY, JSON.stringify(currentOrders));
+    } catch (e) {}
     setLoading(false);
   };
 
