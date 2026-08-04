@@ -63,83 +63,99 @@ export default function ERPHome() {
 
       {/* MAIN CONTENT WORKSPACE */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 space-y-3">
-        <div className="flex flex-row items-center justify-between gap-2 bg-white px-3.5 py-2.5 rounded-xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
-              <span>Operations Command Center</span>
-            </h2>
-            <div className="hidden sm:flex items-center gap-1 text-[11px] text-slate-400 font-semibold">
-              <ChevronRight className="w-3 h-3 text-amber-500" />
-              <span>JRC Industrial OS</span>
+        {/* SIDE-BY-SIDE HEADER & COMPACT DEPARTMENT CARDS */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-stretch">
+          {/* LEFT: COMMAND CENTER TITLE & USER BADGE */}
+          <div className="lg:col-span-4 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-[10px] text-blue-700 font-extrabold">
+                <span>JRC Industrial OS</span>
+                <ChevronRight className="w-3 h-3 text-amber-500" />
+                <span className="text-slate-900">Dashboard</span>
+              </div>
+              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight leading-tight">
+                Operations Command Center
+              </h2>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 mt-2">
+              <span className="px-2.5 py-1 text-[10px] rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-extrabold flex items-center gap-1.5 w-fit">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Logged in as</span> {currentUserEmail}
+              </span>
             </div>
           </div>
-          <span className="px-2.5 py-1 text-[11px] rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-extrabold flex items-center gap-1.5 shrink-0">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="hidden sm:inline">Logged in as</span> {currentUserEmail}
-          </span>
-        </div>
 
-        {/* RESPONSIVE COMPACT DEPARTMENT CARDS */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-          <button
-            onClick={() => router.push("/sales")}
-            className="p-3 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-600 hover:shadow-md transition-all active:scale-[0.98] shadow-2xs space-y-0.5 relative overflow-hidden group"
-          >
-            <div className="w-full h-1 bg-orange-500 absolute top-0 left-0"></div>
-            <div className="flex items-center justify-between text-slate-500 text-[10px] font-extrabold uppercase tracking-wider">
-              <span>Sales</span>
-              <ShoppingCart className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
-            </div>
-            <p className="text-lg font-extrabold text-slate-900 leading-tight">{stats.totalSalesOrders} Orders</p>
-            <span className="text-[11px] text-blue-700 font-extrabold block pt-0.5 group-hover:translate-x-1 transition-transform">
-              Open Sales Orders →
-            </span>
-          </button>
+          {/* RIGHT: 4 DEPARTMENT CARDS GRID */}
+          <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button
+              onClick={() => router.push("/sales")}
+              className="p-2.5 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-600 hover:shadow-md transition-all active:scale-[0.98] shadow-2xs space-y-0.5 relative overflow-hidden group flex flex-col justify-between"
+            >
+              <div className="w-full h-1 bg-orange-500 absolute top-0 left-0"></div>
+              <div className="flex items-center justify-between text-slate-500 text-[9px] font-extrabold uppercase tracking-wider pt-0.5">
+                <span>Sales</span>
+                <ShoppingCart className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
+              </div>
+              <div>
+                <p className="text-base font-extrabold text-slate-900 leading-tight">{stats.totalSalesOrders} Orders</p>
+                <span className="text-[10px] text-blue-700 font-extrabold block group-hover:translate-x-1 transition-transform">
+                  Open Orders →
+                </span>
+              </div>
+            </button>
 
-          <button
-            onClick={() => router.push("/recipes")}
-            className="p-3 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-600 hover:shadow-md transition-all active:scale-[0.98] shadow-2xs space-y-0.5 relative overflow-hidden group"
-          >
-            <div className="w-full h-1 bg-emerald-500 absolute top-0 left-0"></div>
-            <div className="flex items-center justify-between text-slate-500 text-[10px] font-extrabold uppercase tracking-wider">
-              <span>Production</span>
-              <Package className="w-3.5 h-3.5 text-emerald-600 group-hover:scale-110 transition-transform" />
-            </div>
-            <p className="text-lg font-extrabold text-slate-900 leading-tight">Formulas</p>
-            <span className="text-[11px] text-emerald-700 font-extrabold block pt-0.5 group-hover:translate-x-1 transition-transform">
-              Chemical Work Orders →
-            </span>
-          </button>
+            <button
+              onClick={() => router.push("/recipes")}
+              className="p-2.5 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-600 hover:shadow-md transition-all active:scale-[0.98] shadow-2xs space-y-0.5 relative overflow-hidden group flex flex-col justify-between"
+            >
+              <div className="w-full h-1 bg-emerald-500 absolute top-0 left-0"></div>
+              <div className="flex items-center justify-between text-slate-500 text-[9px] font-extrabold uppercase tracking-wider pt-0.5">
+                <span>Production</span>
+                <Package className="w-3.5 h-3.5 text-emerald-600 group-hover:scale-110 transition-transform" />
+              </div>
+              <div>
+                <p className="text-base font-extrabold text-slate-900 leading-tight">Formulas</p>
+                <span className="text-[10px] text-emerald-700 font-extrabold block group-hover:translate-x-1 transition-transform">
+                  Work Orders →
+                </span>
+              </div>
+            </button>
 
-          <button
-            onClick={() => router.push("/inventory")}
-            className="p-3 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-600 hover:shadow-md transition-all active:scale-[0.98] shadow-2xs space-y-0.5 relative overflow-hidden group"
-          >
-            <div className="w-full h-1 bg-blue-500 absolute top-0 left-0"></div>
-            <div className="flex items-center justify-between text-slate-500 text-[10px] font-extrabold uppercase tracking-wider">
-              <span>Logistics</span>
-              <Boxes className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
-            </div>
-            <p className="text-lg font-extrabold text-slate-900 leading-tight">{stats.totalProducts} SKUs</p>
-            <span className="text-[11px] text-blue-700 font-extrabold block pt-0.5 group-hover:translate-x-1 transition-transform">
-              Inventory Ledger →
-            </span>
-          </button>
+            <button
+              onClick={() => router.push("/inventory")}
+              className="p-2.5 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-600 hover:shadow-md transition-all active:scale-[0.98] shadow-2xs space-y-0.5 relative overflow-hidden group flex flex-col justify-between"
+            >
+              <div className="w-full h-1 bg-blue-500 absolute top-0 left-0"></div>
+              <div className="flex items-center justify-between text-slate-500 text-[9px] font-extrabold uppercase tracking-wider pt-0.5">
+                <span>Logistics</span>
+                <Boxes className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
+              </div>
+              <div>
+                <p className="text-base font-extrabold text-slate-900 leading-tight">{stats.totalProducts} SKUs</p>
+                <span className="text-[10px] text-blue-700 font-extrabold block group-hover:translate-x-1 transition-transform">
+                  Ledger →
+                </span>
+              </div>
+            </button>
 
-          <button
-            onClick={() => router.push("/users")}
-            className="p-3 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-600 hover:shadow-md transition-all active:scale-[0.98] shadow-2xs space-y-0.5 relative overflow-hidden group"
-          >
-            <div className="w-full h-1 bg-amber-500 absolute top-0 left-0"></div>
-            <div className="flex items-center justify-between text-slate-500 text-[10px] font-extrabold uppercase tracking-wider">
-              <span>Security & RBAC</span>
-              <ShieldCheck className="w-3.5 h-3.5 text-amber-600 group-hover:scale-110 transition-transform" />
-            </div>
-            <p className="text-lg font-extrabold text-slate-900 leading-tight">Super Admin</p>
-            <span className="text-[11px] text-amber-700 font-extrabold block pt-0.5 group-hover:translate-x-1 transition-transform">
-              User Permissions →
-            </span>
-          </button>
+            <button
+              onClick={() => router.push("/users")}
+              className="p-2.5 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-600 hover:shadow-md transition-all active:scale-[0.98] shadow-2xs space-y-0.5 relative overflow-hidden group flex flex-col justify-between"
+            >
+              <div className="w-full h-1 bg-amber-500 absolute top-0 left-0"></div>
+              <div className="flex items-center justify-between text-slate-500 text-[9px] font-extrabold uppercase tracking-wider pt-0.5">
+                <span>Security</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-600 group-hover:scale-110 transition-transform" />
+              </div>
+              <div>
+                <p className="text-base font-extrabold text-slate-900 leading-tight">Admin</p>
+                <span className="text-[10px] text-amber-700 font-extrabold block group-hover:translate-x-1 transition-transform">
+                  Permissions →
+                </span>
+              </div>
+            </button>
+          </div>
         </div>
 
         {/* LIVE SYNCHRONIZED ORDERS TASK WORKSPACE */}
