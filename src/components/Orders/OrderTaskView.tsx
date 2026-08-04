@@ -105,10 +105,16 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
 
   // Filter orders by tab & search
   const filteredOrders = orders.filter((o) => {
+    if (!o) return false;
+    const orderNo = (o.order_number || "").toLowerCase();
+    const custName = (o.customer_name || "").toLowerCase();
+    const poRef = (o.client_po_ref || "").toLowerCase();
+    const search = (searchTerm || "").toLowerCase();
+
     const matchesSearch =
-      o.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.client_po_ref.toLowerCase().includes(searchTerm.toLowerCase());
+      orderNo.includes(search) ||
+      custName.includes(search) ||
+      poRef.includes(search);
 
     if (!matchesSearch) return false;
 
@@ -120,10 +126,13 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
 
     if (isCompletedOrCancelled) return false;
 
+    const deptResp = (o.current_department_responsible || "Sales").toLowerCase();
+    const targetDept = activeDepartment.toLowerCase();
+
     const isMyResponsibility =
       activeDepartment === "Admin"
         ? true
-        : o.current_department_responsible.toLowerCase() === activeDepartment.toLowerCase();
+        : deptResp === targetDept;
 
     if (activeTab === "waiting") {
       return isMyResponsibility;
@@ -134,21 +143,23 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
 
   const waitingCount = orders.filter(
     (o) =>
+      o &&
       o.current_status !== "Completed" &&
       o.current_status !== "Cancelled" &&
-      (activeDepartment === "Admin" || o.current_department_responsible.toLowerCase() === activeDepartment.toLowerCase())
+      (activeDepartment === "Admin" || (o.current_department_responsible || "Sales").toLowerCase() === activeDepartment.toLowerCase())
   ).length;
 
   const inProgressCount = orders.filter(
     (o) =>
+      o &&
       o.current_status !== "Completed" &&
       o.current_status !== "Cancelled" &&
       activeDepartment !== "Admin" &&
-      o.current_department_responsible.toLowerCase() !== activeDepartment.toLowerCase()
+      (o.current_department_responsible || "Sales").toLowerCase() !== activeDepartment.toLowerCase()
   ).length;
 
   const completedCount = orders.filter(
-    (o) => o.current_status === "Completed" || o.current_status === "Cancelled"
+    (o) => o && (o.current_status === "Completed" || o.current_status === "Cancelled")
   ).length;
 
   // Material Requisition Handlers
@@ -381,9 +392,9 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filteredOrders.map((o) => {
-            const isMyTurn =
-              activeDepartment === "Admin" ||
-              o.current_department_responsible.toLowerCase() === activeDepartment.toLowerCase();
+            const deptResp = (o.current_department_responsible || "Sales").toLowerCase();
+            const targetDept = activeDepartment.toLowerCase();
+            const isMyTurn = activeDepartment === "Admin" || deptResp === targetDept;
 
             const requisitionTotal = o.requested_materials
               ? o.requested_materials.reduce((sum, item) => sum + (item.total_cost || 0), 0)
