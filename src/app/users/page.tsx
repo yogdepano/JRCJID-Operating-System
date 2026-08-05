@@ -249,7 +249,7 @@ export default function UsersPage() {
   });
 
   return (
-    <RoleGuard allowedRoles={["super_admin"]} moduleName="User Security & RBAC">
+    <RoleGuard allowedRoles={["super_admin"]} moduleName="User Security">
       <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
@@ -262,7 +262,7 @@ export default function UsersPage() {
               <ShieldCheck className="w-7 h-7 text-blue-700" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">User Security & Role-Based Access (RBAC)</h1>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">User Security & Permissions</h1>
               <p className="text-xs sm:text-sm text-slate-600 font-medium">Manage staff accounts, department authorizations, and system permissions</p>
             </div>
           </div>
@@ -405,7 +405,7 @@ export default function UsersPage() {
               <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
                   <UserPlus className="w-5 h-5 text-blue-700" />
-                  <span>Register Employee Account & RBAC Role</span>
+                  <span>Register Employee Account</span>
                 </h3>
                 <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-lg font-bold">✕</button>
               </div>

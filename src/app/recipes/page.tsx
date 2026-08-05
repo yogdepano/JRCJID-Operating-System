@@ -214,13 +214,13 @@ export default function RecipesPage() {
           <div className="bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-sm space-y-4 pt-4 border-t-4 border-t-blue-600">
             <h3 className="text-base font-extrabold text-slate-900 uppercase tracking-tight flex items-center gap-2">
               <FlaskConical className="w-5 h-5 text-blue-700" />
-              <span>Chemical BoM Formula Master & Batch Scaler</span>
+              <span>Chemical BoM Formulas & Batch Scaler</span>
             </h3>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* RECIPE MASTER LIST */}
+              {/* RECIPE LIST */}
               <div className="space-y-2">
-                <h4 className="text-xs font-extrabold text-blue-700 uppercase tracking-wider">Product Master Formulas ({recipes.length})</h4>
+                <h4 className="text-xs font-extrabold text-blue-700 uppercase tracking-wider">Product Formulas ({recipes.length})</h4>
                 {recipes.map((r) => (
                   <button
                     key={r.id}

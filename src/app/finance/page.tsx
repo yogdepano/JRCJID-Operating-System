@@ -122,7 +122,7 @@ export default function FinancePage() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Finance & Accounts Receivable (Purchasing Approvals)</h1>
-              <p className="text-xs sm:text-sm text-slate-600 font-medium">Approve raw material purchases requested by Production, monitor BIR 12% VAT, and review credit terms</p>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">Approve raw material purchases requested by Production, monitor 12% VAT, and review credit terms</p>
             </div>
           </div>
 
@@ -131,7 +131,7 @@ export default function FinancePage() {
             className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 border-2 border-amber-500 text-slate-950 font-extrabold text-sm shadow-md shadow-yellow-500/20 active:scale-95 transition-all"
           >
             <FileText className="w-5 h-5 text-slate-950" />
-            <span>Open Printable BIR Document Vault →</span>
+            <span>Open Printable Document Vault →</span>
           </Link>
         </div>
 
@@ -149,9 +149,9 @@ export default function FinancePage() {
 
           <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm space-y-1 relative overflow-hidden">
             <div className="w-full h-2 bg-orange-500 absolute top-0 left-0"></div>
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">BIR Output VAT (12%)</span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Output VAT (12%)</span>
             <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">₱{totalVat.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-            <span className="text-[11px] text-slate-600 font-semibold block pt-1">Philippine BIR Sales Tax</span>
+            <span className="text-[11px] text-slate-600 font-semibold block pt-1">Sales Tax (12% VAT)</span>
           </div>
 
           <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm space-y-1 relative overflow-hidden">
@@ -198,7 +198,7 @@ export default function FinancePage() {
             <DollarSign className="w-12 h-12 text-slate-400 mx-auto" />
             <h3 className="text-base font-extrabold text-slate-900">No Finance Invoices Logged Yet</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
-              Sales Orders submitted in the Sales Department automatically reflect in Finance for BIR invoicing.
+              Sales Orders submitted in the Sales Department automatically reflect in Finance for invoicing.
             </p>
           </div>
         ) : (
@@ -206,7 +206,7 @@ export default function FinancePage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b-2 border-slate-200 text-xs text-slate-500 uppercase tracking-wider font-extrabold">
-                  <th className="py-3 px-3">BIR Invoice #</th>
+                  <th className="py-3 px-3">Invoice #</th>
                   <th className="py-3 px-3">Sales Order Ref</th>
                   <th className="py-3 px-3">Customer Account</th>
                   <th className="py-3 px-3">Terms</th>

@@ -138,7 +138,7 @@ function DocumentVaultContent() {
                 : "bg-slate-100 text-slate-700 hover:bg-blue-50 border border-slate-200"
             }`}
           >
-            Official Sales Invoice (BIR 12% VAT)
+            Official Sales Invoice (12% VAT)
           </button>
           <button
             onClick={() => setDocType("delivery_receipt")}
@@ -189,7 +189,7 @@ function DocumentVaultContent() {
 
 export default function DocumentsPage() {
   return (
-    <RoleGuard allowedRoles={["super_admin", "sales_rep", "finance_manager"]} moduleName="BIR Document Vault & Printable Records">
+    <RoleGuard allowedRoles={["super_admin", "sales_rep", "finance_manager"]} moduleName="Document Vault & Printable Records">
       <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
@@ -203,7 +203,7 @@ export default function DocumentsPage() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Document Vault & Printable Records</h1>
-              <p className="text-xs sm:text-sm text-slate-600 font-medium">Generate BIR-compliant Official Sales Invoices, Delivery Receipts (DR), and Service Certificates</p>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">Generate Official Sales Invoices, Delivery Receipts (DR), and Service Certificates</p>
             </div>
           </div>
 

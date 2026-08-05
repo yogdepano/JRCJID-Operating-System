@@ -173,7 +173,7 @@ export default function PestControlPage() {
   });
 
   return (
-    <RoleGuard allowedRoles={["super_admin", "sales_rep", "pest_control_tech", "purchasing_officer", "logistics_driver"]} moduleName="Pest Control Field Dispatch & Services">
+    <RoleGuard allowedRoles={["super_admin", "sales_rep", "pest_control_tech", "purchasing_officer", "logistics_driver"]} moduleName="Pest Control Services">
       <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
@@ -186,8 +186,8 @@ export default function PestControlPage() {
               <Bug className="w-7 h-7 text-blue-700" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Pest Control Service Dispatch</h1>
-              <p className="text-xs sm:text-sm text-slate-600 font-medium">Commercial pest control schedules, chemical formulation notes, and field technician dispatches</p>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Pest Control Services</h1>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">Commercial pest control schedules, chemical formulation notes, and field technician assignments</p>
             </div>
           </div>
 
@@ -196,7 +196,7 @@ export default function PestControlPage() {
             className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 border-2 border-amber-500 text-slate-950 font-extrabold text-sm shadow-md shadow-yellow-500/20 active:scale-95 transition-all"
           >
             <Plus className="w-5 h-5 text-slate-950" />
-            <span>+ Schedule Service Dispatch</span>
+            <span>+ Schedule Pest Control</span>
           </button>
         </div>
 
@@ -234,9 +234,9 @@ export default function PestControlPage() {
         {filteredJobs.length === 0 ? (
           <div className="p-12 text-center bg-white border-2 border-slate-200 rounded-2xl space-y-3 shadow-sm">
             <Bug className="w-12 h-12 text-slate-400 mx-auto" />
-            <h3 className="text-base font-extrabold text-slate-900">No Pest Control Service Dispatches Found</h3>
+            <h3 className="text-base font-extrabold text-slate-900">No Pest Control Services Found</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
-              Click "+ Schedule Service Dispatch" to register a new commercial pest control treatment or technician schedule.
+              Click "+ Schedule Pest Control" to register a new commercial pest control treatment or technician schedule.
             </p>
           </div>
         ) : (
@@ -308,7 +308,7 @@ export default function PestControlPage() {
               <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
                   <Bug className="w-5 h-5 text-blue-700" />
-                  <span>Schedule Pest Control Field Service Dispatch</span>
+                  <span>Schedule Pest Control Service</span>
                 </h3>
                 <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-lg font-bold">✕</button>
               </div>
@@ -401,7 +401,7 @@ export default function PestControlPage() {
                     type="submit"
                     className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 text-xs font-extrabold shadow-md"
                   >
-                    Transmit Dispatch to Field Tech
+                    Assign Service to Field Tech
                   </button>
                 </div>
               </form>

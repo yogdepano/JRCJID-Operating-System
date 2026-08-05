@@ -741,7 +741,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5 bg-amber-50/60 p-1.5 rounded-lg border border-amber-200/80">
                     <div className="flex items-center gap-1 text-[10px] font-extrabold text-amber-900">
                       <ShieldCheck className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                      <span>Super Admin Master Control</span>
+                      <span>Super Admin Control</span>
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -1023,7 +1023,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
             <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
               <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-amber-600" />
-                <span>Super Admin Master Edit ({editModalOrder.order_number})</span>
+                <span>Super Admin Edit ({editModalOrder.order_number})</span>
               </h3>
               <button onClick={() => setEditModalOrder(null)} className="text-slate-400 hover:text-slate-900 font-bold text-lg">
                 ✕
@@ -1118,7 +1118,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                   type="submit"
                   className="px-5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 text-xs font-extrabold shadow-md"
                 >
-                  Save Master Changes
+                  Save Order Changes
                 </button>
               </div>
             </form>

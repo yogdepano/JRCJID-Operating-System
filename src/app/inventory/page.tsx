@@ -269,7 +269,7 @@ export default function InventoryPage() {
                 <Package className="w-12 h-12 text-slate-400 mx-auto" />
                 <h3 className="text-base font-extrabold text-slate-900">No Inventory Items Found</h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
-                  Add products in <Link href="/products" className="text-blue-700 underline font-bold">Product Catalog Master</Link> to view them in Logistics.
+                  Add products in <Link href="/products" className="text-blue-700 underline font-bold">Product Catalog</Link> to view them in Logistics.
                 </p>
               </div>
             ) : (

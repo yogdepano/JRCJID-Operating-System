@@ -392,7 +392,7 @@ export default function SalesPage() {
                       <Package className="w-8 h-8 text-slate-400 mx-auto" />
                       <p className="text-xs text-blue-700 font-extrabold">No products in catalog yet.</p>
                       <p className="text-[11px] text-slate-600 font-medium">
-                        Go to <Link href="/products" className="text-blue-700 underline font-bold">Product Catalog Master</Link> to add chemical products and variant prices first.
+                        Go to <Link href="/products" className="text-blue-700 underline font-bold">Product Catalog</Link> to add chemical products and variant prices first.
                       </p>
                     </div>
                   ) : (

@@ -38,10 +38,10 @@ const mainDepartmentNav: NavItem[] = [
 ];
 
 const secondaryNav: NavItem[] = [
-  { name: "Product Catalog Master", href: "/products", icon: Package },
-  { name: "Pest Control Dispatch", href: "/pest-control", icon: Bug, allowedRoles: ["super_admin", "sales_rep", "pest_control_tech", "purchasing_officer", "logistics_driver"] },
-  { name: "User Security & RBAC", href: "/users", icon: ShieldCheck, allowedRoles: ["super_admin"] },
-  { name: "Document Vault (BIR)", href: "/documents", icon: FileText, allowedRoles: ["super_admin", "sales_rep", "finance_manager"] },
+  { name: "Product Catalog", href: "/products", icon: Package },
+  { name: "Pest Control", href: "/pest-control", icon: Bug, allowedRoles: ["super_admin", "sales_rep", "pest_control_tech", "purchasing_officer", "logistics_driver"] },
+  { name: "User Security", href: "/users", icon: ShieldCheck, allowedRoles: ["super_admin"] },
+  { name: "Document Vault", href: "/documents", icon: FileText, allowedRoles: ["super_admin", "sales_rep", "finance_manager"] },
 ];
 
 export function TopNavbar() {
