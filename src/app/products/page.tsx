@@ -559,7 +559,7 @@ export default function ProductsPage() {
                   </div>
 
                   <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Unit of Measure (UOM)</label>
+                    <label className="text-slate-800 font-extrabold block mb-1">Unit</label>
                     <input
                       type="text"
                       required
@@ -670,7 +670,7 @@ export default function ProductsPage() {
 
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">UOM</label>
+                    <label className="text-slate-800 font-extrabold block mb-1">Unit</label>
                     <input
                       type="text"
                       required

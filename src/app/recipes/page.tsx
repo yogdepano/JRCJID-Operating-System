@@ -32,30 +32,35 @@ export default function RecipesPage() {
   const [selectedRecipe, setSelectedRecipe] = useState<BoMRecipe | null>(null);
   const [targetBatchQty, setTargetBatchQty] = useState<number>(1000);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // FORM STATE FOR NEW RECIPE CREATION
   const [availableProducts, setAvailableProducts] = useState<any[]>([]);
-  const [selectedProductSku, setSelectedProductSku] = useState("");
-  const [batchYieldQty, setBatchYieldQty] = useState<number>(500);
-  const [batchYieldUom, setBatchYieldUom] = useState("L (Liters)");
-  const [recipeVersion, setRecipeVersion] = useState("v1.0");
 
+  // FORM STATE FOR NEW FINISHED PRODUCT & EMBEDDED FORMULA
+  const [productName, setProductName] = useState("");
+  const [productVariant, setProductVariant] = useState("Standard");
+  const [productSku, setProductSku] = useState("");
+  const [productUnit, setProductUnit] = useState("Drum (200L)");
+  const [sellingPrice, setSellingPrice] = useState<number>(0);
   const [formIngredients, setFormIngredients] = useState<IngredientItem[]>([]);
 
-  // Load recipes and product list
+  // Load raw materials from Supabase & cache
   const loadData = async () => {
+    let prods: any[] = [];
     try {
       const storedProds = localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY);
       if (storedProds) {
-        const parsed = JSON.parse(storedProds);
-        setAvailableProducts(parsed);
-        if (parsed.length > 0 && !selectedProductSku) {
-          setSelectedProductSku(parsed[0].sku);
-        }
+        prods = JSON.parse(storedProds);
       }
-    } catch (e) {
-      console.error("Products cache error:", e);
-    }
+    } catch (e) {}
+
+    try {
+      const supabase = createClient();
+      const { data } = await supabase.from("products").select("*").order("created_at", { ascending: false });
+      if (data && data.length > 0) {
+        prods = data;
+      }
+    } catch (err) {}
+
+    setAvailableProducts(prods);
 
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_RECIPES_KEY);
@@ -76,9 +81,14 @@ export default function RecipesPage() {
     loadData();
   }, []);
 
+  const rawMaterialsList = availableProducts.filter(
+    (p) => !p.category || p.category === "raw_material" || p.category === "packaging"
+  );
+
   const handleAddIngredient = () => {
-    const defaultSku = availableProducts[0]?.sku || "RM-001";
-    const defaultName = availableProducts[0]?.name || "Raw Chemical Ingredient";
+    const firstRm = rawMaterialsList[0] || availableProducts[0];
+    const defaultSku = firstRm?.sku || "RM-001";
+    const defaultName = firstRm?.name || "Supplier Raw Material";
     setFormIngredients([
       ...formIngredients,
       { raw_material_sku: defaultSku, name: defaultName, ratio_qty: 10, uom: "KG" },
@@ -108,29 +118,55 @@ export default function RecipesPage() {
     );
   };
 
-  const handleSaveRecipe = (e: React.FormEvent) => {
+  const generateSku = (name: string, variant: string) => {
+    if (!name.trim()) return "";
+    const cleanName = name.trim().split(/\s+/).map((w) => w[0]).join("").toUpperCase().substring(0, 4);
+    const cleanVar = variant && variant !== "Standard" ? `-${variant.substring(0, 3).toUpperCase()}` : "";
+    return `FG-${cleanName}${cleanVar}`;
+  };
+
+  const handleSaveProductAndFormula = async (e: React.FormEvent) => {
     e.preventDefault();
-    const prod = availableProducts.find((p) => p.sku === selectedProductSku);
+    const finalSku = productSku || generateSku(productName, productVariant) || `FG-${Date.now()}`;
+    const fullName = productVariant && productVariant !== "Standard" ? `${productName} (${productVariant})` : productName;
+
     const newRec: BoMRecipe = {
       id: `bom-${Date.now()}`,
-      finished_product_sku: selectedProductSku || "FG-001",
-      finished_product_name: prod ? prod.name : "Finished Chemical Product",
-      batch_yield_qty: batchYieldQty,
-      batch_yield_uom: batchYieldUom,
-      version: recipeVersion || "v1.0",
+      finished_product_sku: finalSku,
+      finished_product_name: fullName,
+      batch_yield_qty: 1,
+      batch_yield_uom: productUnit,
+      version: "v1.0",
       ingredients: formIngredients,
     };
 
-    const updated = [newRec, ...recipes];
-    setRecipes(updated);
+    const updatedRecipes = [newRec, ...recipes];
+    setRecipes(updatedRecipes);
     setSelectedRecipe(newRec);
-    setTargetBatchQty(newRec.batch_yield_qty * 2);
+    setTargetBatchQty(100);
+
     try {
-      localStorage.setItem(LOCAL_STORAGE_RECIPES_KEY, JSON.stringify(updated));
-    } catch (err) {
-      console.error("Local storage recipe write error:", err);
-    }
+      localStorage.setItem(LOCAL_STORAGE_RECIPES_KEY, JSON.stringify(updatedRecipes));
+    } catch (err) {}
+
+    // Save product to database
+    try {
+      const supabase = createClient();
+      await supabase.from("products").insert({
+        sku: finalSku,
+        name: fullName,
+        category: "finished_chemical",
+        uom: productUnit,
+        unit_cost: 0,
+        selling_price: sellingPrice,
+      });
+    } catch (err) {}
+
     setIsModalOpen(false);
+    setProductName("");
+    setProductVariant("Standard");
+    setProductSku("");
+    setSellingPrice(0);
     setFormIngredients([]);
   };
 
@@ -151,7 +187,7 @@ export default function RecipesPage() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Production Department (Manufacturing Tasks)</h1>
-              <p className="text-xs sm:text-sm text-slate-600 font-medium">Review pending orders, verify raw materials, scale chemical BoM recipes, and start production</p>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">Log finished chemical products with embedded formulas, scale batch yields, and process work orders</p>
             </div>
           </div>
 
@@ -166,7 +202,7 @@ export default function RecipesPage() {
             className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 border-2 border-amber-500 text-slate-950 font-extrabold text-sm shadow-md shadow-yellow-500/20 active:scale-95 transition-all"
           >
             <Plus className="w-5 h-5 text-slate-950" />
-            <span>+ Build Product Recipe / Formula</span>
+            <span>+ Log Finished Product & Formula</span>
           </button>
         </div>
 
@@ -275,82 +311,107 @@ export default function RecipesPage() {
           </div>
         )}
 
-        {/* CREATE RECIPE MODAL */}
+        {/* LOG FINISHED PRODUCT & FORMULA MODAL */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
             <div className="bg-white border-2 border-blue-600 rounded-2xl w-full max-w-2xl p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
               <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
                   <FlaskConical className="w-5 h-5 text-blue-700" />
-                  <span>Build Chemical Product Formula / Recipe</span>
+                  <span>Log Finished Product & Formula</span>
                 </h3>
                 <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-lg font-bold">✕</button>
               </div>
 
-              <form onSubmit={handleSaveRecipe} className="space-y-4 text-xs sm:text-sm">
+              <form onSubmit={handleSaveProductAndFormula} className="space-y-4 text-xs sm:text-sm">
                 <div>
-                  <label className="text-slate-800 font-extrabold block mb-1">Finished Chemical Product Item</label>
-                  <select
-                    value={selectedProductSku}
-                    onChange={(e) => setSelectedProductSku(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900"
-                  >
-                    {availableProducts.map((p) => (
-                      <option key={p.sku} value={p.sku}>
-                        {p.name} ({p.sku})
-                      </option>
-                    ))}
-                  </select>
+                  <label className="text-slate-800 font-extrabold block mb-1">Product Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Industrial Multi-Surface Sanitizer"
+                    value={productName}
+                    onChange={(e) => {
+                      setProductName(e.target.value);
+                      if (!productSku) setProductSku(generateSku(e.target.value, productVariant));
+                    }}
+                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:border-blue-600 focus:outline-none"
+                  />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Standard Batch Yield Qty</label>
+                    <label className="text-slate-800 font-extrabold block mb-1">Variant</label>
                     <input
-                      type="number"
-                      required
-                      min="1"
-                      value={batchYieldQty}
-                      onChange={(e) => setBatchYieldQty(Number(e.target.value))}
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl font-mono text-xs sm:text-sm font-extrabold text-slate-900"
+                      type="text"
+                      placeholder="e.g. Lavender Fresh / Standard"
+                      value={productVariant}
+                      onChange={(e) => {
+                        setProductVariant(e.target.value);
+                        setProductSku(generateSku(productName, e.target.value));
+                      }}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:border-blue-600 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Yield UOM</label>
+                    <label className="text-slate-800 font-extrabold block mb-1">SKU Code</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. FG-SAN-LAV-20L"
+                      value={productSku}
+                      onChange={(e) => setProductSku(e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl font-mono text-xs sm:text-sm font-extrabold text-blue-700 focus:border-blue-600 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-slate-800 font-extrabold block mb-1">Unit</label>
                     <select
-                      value={batchYieldUom}
-                      onChange={(e) => setBatchYieldUom(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
+                      value={productUnit}
+                      onChange={(e) => setProductUnit(e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:border-blue-600 focus:outline-none"
                     >
-                      <option value="L (Liters)">L (Liters)</option>
-                      <option value="KG (Kilograms)">KG (Kilograms)</option>
                       <option value="Drum (200L)">Drum (200L)</option>
                       <option value="Pail (20L)">Pail (20L)</option>
+                      <option value="Gallon (4L)">Gallon (4L)</option>
+                      <option value="Bottle (1L)">Bottle (1L)</option>
+                      <option value="L (Liters)">L (Liters)</option>
+                      <option value="KG (Kilograms)">KG (Kilograms)</option>
+                      <option value="PCS">PCS</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Recipe Version</label>
+                    <label className="text-slate-800 font-extrabold block mb-1">Selling Price (₱)</label>
                     <input
-                      type="text"
+                      type="number"
                       required
-                      value={recipeVersion}
-                      onChange={(e) => setRecipeVersion(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl font-mono text-xs sm:text-sm font-extrabold text-slate-900"
+                      step="0.01"
+                      placeholder="3200.00"
+                      value={sellingPrice || ""}
+                      onChange={(e) => setSellingPrice(Number(e.target.value))}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl font-mono text-xs sm:text-sm font-extrabold text-slate-900 focus:border-blue-600 focus:outline-none"
                     />
                   </div>
                 </div>
 
+                {/* FORMULA SECTION */}
                 <div className="border-t-2 border-b-2 border-slate-100 py-3 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-blue-700 uppercase tracking-wider">
-                      Formula Ingredients ({formIngredients.length})
-                    </span>
+                    <div>
+                      <span className="text-xs font-extrabold text-blue-700 uppercase tracking-wider block">
+                        Formula (Bill of Materials)
+                      </span>
+                      <span className="text-[11px] text-slate-500 font-medium">Select ingredients from Supplier Raw Materials</span>
+                    </div>
                     <button
                       type="button"
                       onClick={handleAddIngredient}
-                      className="px-3 py-1.5 rounded-lg bg-amber-400 border border-amber-500 text-slate-950 font-extrabold text-xs"
+                      className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 font-extrabold text-xs shadow-xs active:scale-95 transition-all"
                     >
                       + Add Ingredient
                     </button>
@@ -359,33 +420,57 @@ export default function RecipesPage() {
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                     {formIngredients.map((ing, idx) => (
                       <div key={idx} className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200">
-                        <select
-                          value={ing.raw_material_sku}
-                          onChange={(e) => handleUpdateIngredient(idx, "raw_material_sku", e.target.value)}
-                          className="flex-1 p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold"
-                        >
-                          {availableProducts.map((p) => (
-                            <option key={p.sku} value={p.sku}>
-                              {p.name} ({p.sku})
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex-1">
+                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Ingredient #{idx + 1} (Supplier Raw Material)</label>
+                          <select
+                            value={ing.raw_material_sku}
+                            onChange={(e) => handleUpdateIngredient(idx, "raw_material_sku", e.target.value)}
+                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900"
+                          >
+                            {rawMaterialsList.length > 0 ? (
+                              rawMaterialsList.map((p) => (
+                                <option key={p.sku} value={p.sku}>
+                                  {p.name} ({p.sku})
+                                </option>
+                              ))
+                            ) : (
+                              <option value="RM-001">Supplier Raw Material (RM-001)</option>
+                            )}
+                          </select>
+                        </div>
 
-                        <input
-                          type="number"
-                          step="0.01"
-                          required
-                          value={ing.ratio_qty}
-                          onChange={(e) => handleUpdateIngredient(idx, "ratio_qty", Number(e.target.value))}
-                          className="w-20 p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-right"
-                        />
+                        <div className="w-24">
+                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Qty / Volume</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            required
+                            value={ing.ratio_qty}
+                            onChange={(e) => handleUpdateIngredient(idx, "ratio_qty", Number(e.target.value))}
+                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-right text-slate-900"
+                          />
+                        </div>
 
-                        <span className="text-xs font-mono font-extrabold text-slate-600 w-12">{ing.uom}</span>
+                        <div className="w-24">
+                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Unit</label>
+                          <select
+                            value={ing.uom}
+                            onChange={(e) => handleUpdateIngredient(idx, "uom", e.target.value)}
+                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900"
+                          >
+                            <option value="Liters">Liters</option>
+                            <option value="KG">KG</option>
+                            <option value="Grams">Grams</option>
+                            <option value="mL">mL</option>
+                            <option value="PCS">PCS</option>
+                          </select>
+                        </div>
 
                         <button
                           type="button"
                           onClick={() => handleRemoveIngredient(idx)}
-                          className="p-1 text-rose-600 hover:text-rose-700 font-bold"
+                          className="p-1.5 text-rose-600 hover:text-rose-700 font-bold self-end"
+                          title="Remove ingredient"
                         >
                           ✕
                         </button>
@@ -404,9 +489,9 @@ export default function RecipesPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 text-xs font-extrabold shadow-md"
+                    className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 text-xs font-extrabold shadow-md active:scale-95 transition-all"
                   >
-                    Save BoM Recipe
+                    Save Product & Formula
                   </button>
                 </div>
               </form>
