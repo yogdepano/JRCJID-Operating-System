@@ -87,23 +87,23 @@ export default function ERPHome() {
             </div>
           </div>
 
-          {/* RIGHT: 4 DEPARTMENT CARDS GRID WITH SUBTLE COLOR FILLS */}
+          {/* RIGHT: 4 DARK-THEME DEPARTMENT CARDS GRID */}
           <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-2">
             {/* SALES CARD */}
             <button
               onClick={() => router.push("/sales")}
-              className="p-2.5 rounded-xl bg-gradient-to-br from-orange-50/90 via-amber-50/40 to-white border border-orange-200/90 text-left hover:border-orange-500 hover:shadow-md hover:shadow-orange-500/10 transition-all active:scale-[0.98] shadow-2xs space-y-1 relative overflow-hidden group flex flex-col justify-between"
+              className="p-2.5 rounded-xl bg-[#0f172a] border border-amber-900/60 text-left hover:border-amber-400 hover:shadow-lg hover:shadow-amber-500/10 transition-all active:scale-[0.98] shadow-md space-y-1 relative overflow-hidden group flex flex-col justify-between"
             >
-              <div className="w-full h-1 bg-gradient-to-r from-orange-500 to-amber-500 absolute top-0 left-0"></div>
-              <div className="flex items-center justify-between text-orange-800 text-[10px] font-extrabold uppercase tracking-wider pt-0.5">
+              <div className="w-full h-1 bg-gradient-to-r from-amber-400 to-orange-500 absolute top-0 left-0"></div>
+              <div className="flex items-center justify-between text-amber-400 text-[10px] font-extrabold uppercase tracking-wider pt-0.5">
                 <span>Sales</span>
-                <div className="p-1 rounded-md bg-orange-100 text-orange-600 group-hover:scale-110 transition-transform shadow-2xs">
+                <div className="p-1 rounded-md bg-amber-950/80 text-amber-400 border border-amber-800/60 group-hover:scale-110 transition-transform">
                   <ShoppingCart className="w-3.5 h-3.5" />
                 </div>
               </div>
               <div>
-                <p className="text-base font-extrabold text-slate-900 leading-tight">{stats.totalSalesOrders} Orders</p>
-                <span className="text-[10px] text-orange-700 font-extrabold block group-hover:translate-x-1 transition-transform">
+                <p className="text-base font-extrabold text-white leading-tight">{stats.totalSalesOrders} Orders</p>
+                <span className="text-[10px] text-amber-300 font-extrabold block group-hover:translate-x-1 transition-transform">
                   Open Orders →
                 </span>
               </div>
@@ -112,18 +112,18 @@ export default function ERPHome() {
             {/* PRODUCTION CARD */}
             <button
               onClick={() => router.push("/recipes")}
-              className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white border border-emerald-200/90 text-left hover:border-emerald-500 hover:shadow-md hover:shadow-emerald-500/10 transition-all active:scale-[0.98] shadow-2xs space-y-1 relative overflow-hidden group flex flex-col justify-between"
+              className="p-2.5 rounded-xl bg-[#0f172a] border border-emerald-900/60 text-left hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-500/10 transition-all active:scale-[0.98] shadow-md space-y-1 relative overflow-hidden group flex flex-col justify-between"
             >
-              <div className="w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500 absolute top-0 left-0"></div>
-              <div className="flex items-center justify-between text-emerald-800 text-[10px] font-extrabold uppercase tracking-wider pt-0.5">
+              <div className="w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-400 absolute top-0 left-0"></div>
+              <div className="flex items-center justify-between text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider pt-0.5">
                 <span>Production</span>
-                <div className="p-1 rounded-md bg-emerald-100 text-emerald-600 group-hover:scale-110 transition-transform shadow-2xs">
+                <div className="p-1 rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 group-hover:scale-110 transition-transform">
                   <Package className="w-3.5 h-3.5" />
                 </div>
               </div>
               <div>
-                <p className="text-base font-extrabold text-slate-900 leading-tight">Formulas</p>
-                <span className="text-[10px] text-emerald-700 font-extrabold block group-hover:translate-x-1 transition-transform">
+                <p className="text-base font-extrabold text-white leading-tight">Formulas</p>
+                <span className="text-[10px] text-emerald-300 font-extrabold block group-hover:translate-x-1 transition-transform">
                   Work Orders →
                 </span>
               </div>
@@ -132,18 +132,18 @@ export default function ERPHome() {
             {/* LOGISTICS CARD */}
             <button
               onClick={() => router.push("/inventory")}
-              className="p-2.5 rounded-xl bg-gradient-to-br from-blue-50/90 via-indigo-50/40 to-white border border-blue-200/90 text-left hover:border-blue-500 hover:shadow-md hover:shadow-blue-500/10 transition-all active:scale-[0.98] shadow-2xs space-y-1 relative overflow-hidden group flex flex-col justify-between"
+              className="p-2.5 rounded-xl bg-[#0f172a] border border-blue-900/60 text-left hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 transition-all active:scale-[0.98] shadow-md space-y-1 relative overflow-hidden group flex flex-col justify-between"
             >
-              <div className="w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500 absolute top-0 left-0"></div>
-              <div className="flex items-center justify-between text-blue-800 text-[10px] font-extrabold uppercase tracking-wider pt-0.5">
+              <div className="w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-400 absolute top-0 left-0"></div>
+              <div className="flex items-center justify-between text-blue-400 text-[10px] font-extrabold uppercase tracking-wider pt-0.5">
                 <span>Logistics</span>
-                <div className="p-1 rounded-md bg-blue-100 text-blue-600 group-hover:scale-110 transition-transform shadow-2xs">
+                <div className="p-1 rounded-md bg-blue-950/80 text-blue-400 border border-blue-800/60 group-hover:scale-110 transition-transform">
                   <Boxes className="w-3.5 h-3.5" />
                 </div>
               </div>
               <div>
-                <p className="text-base font-extrabold text-slate-900 leading-tight">{stats.totalProducts} SKUs</p>
-                <span className="text-[10px] text-blue-700 font-extrabold block group-hover:translate-x-1 transition-transform">
+                <p className="text-base font-extrabold text-white leading-tight">{stats.totalProducts} SKUs</p>
+                <span className="text-[10px] text-blue-300 font-extrabold block group-hover:translate-x-1 transition-transform">
                   Ledger →
                 </span>
               </div>
@@ -152,18 +152,18 @@ export default function ERPHome() {
             {/* SECURITY CARD */}
             <button
               onClick={() => router.push("/users")}
-              className="p-2.5 rounded-xl bg-gradient-to-br from-purple-50/90 via-violet-50/40 to-white border border-purple-200/90 text-left hover:border-purple-500 hover:shadow-md hover:shadow-purple-500/10 transition-all active:scale-[0.98] shadow-2xs space-y-1 relative overflow-hidden group flex flex-col justify-between"
+              className="p-2.5 rounded-xl bg-[#0f172a] border border-purple-900/60 text-left hover:border-purple-400 hover:shadow-lg hover:shadow-purple-500/10 transition-all active:scale-[0.98] shadow-md space-y-1 relative overflow-hidden group flex flex-col justify-between"
             >
-              <div className="w-full h-1 bg-gradient-to-r from-purple-500 to-amber-500 absolute top-0 left-0"></div>
-              <div className="flex items-center justify-between text-purple-800 text-[10px] font-extrabold uppercase tracking-wider pt-0.5">
+              <div className="w-full h-1 bg-gradient-to-r from-purple-400 to-pink-400 absolute top-0 left-0"></div>
+              <div className="flex items-center justify-between text-purple-400 text-[10px] font-extrabold uppercase tracking-wider pt-0.5">
                 <span>Security</span>
-                <div className="p-1 rounded-md bg-purple-100 text-purple-600 group-hover:scale-110 transition-transform shadow-2xs">
+                <div className="p-1 rounded-md bg-purple-950/80 text-purple-400 border border-purple-800/60 group-hover:scale-110 transition-transform">
                   <ShieldCheck className="w-3.5 h-3.5" />
                 </div>
               </div>
               <div>
-                <p className="text-base font-extrabold text-slate-900 leading-tight">Admin</p>
-                <span className="text-[10px] text-purple-700 font-extrabold block group-hover:translate-x-1 transition-transform">
+                <p className="text-base font-extrabold text-white leading-tight">Admin</p>
+                <span className="text-[10px] text-purple-300 font-extrabold block group-hover:translate-x-1 transition-transform">
                   Permissions →
                 </span>
               </div>
