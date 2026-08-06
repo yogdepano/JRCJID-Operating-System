@@ -104,8 +104,25 @@ export function useUnifiedOrders() {
           };
         });
 
-        // Supabase database is master source of truth for list
-        currentOrders = remoteMapped.filter(
+        // Safely merge remote DB orders with local orders (retaining unsynced local orders)
+        const orderMap = new Map<string, UnifiedOrder>();
+        // First seed with local orders
+        currentOrders.forEach((o) => {
+          if (o.id) orderMap.set(o.id, o);
+          if (o.order_number) orderMap.set(o.order_number, o);
+        });
+        // Merge DB orders
+        remoteMapped.forEach((so) => {
+          const existingKey = Array.from(orderMap.keys()).find((k) => k === so.id || k === so.order_number);
+          if (existingKey) {
+            const existing = orderMap.get(existingKey)!;
+            orderMap.set(existing.id, { ...so, ...existing });
+          } else {
+            orderMap.set(so.id, so);
+          }
+        });
+
+        currentOrders = Array.from(orderMap.values()).filter(
           (o) => !deletedIds.includes(o.id) && !deletedIds.includes(o.order_number)
         );
       }
