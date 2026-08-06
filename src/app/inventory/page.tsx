@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Truck, Search, History, Package, ArrowDownRight, ArrowUpRight, Plus, Layers, Trash2 } from "lucide-react";
+import { Truck, Search, History, Package, ArrowDownRight, ArrowUpRight, Plus, Layers, Trash2, Edit3 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
@@ -171,6 +171,28 @@ export default function InventoryPage() {
     try {
       localStorage.setItem(LOCAL_STORAGE_PRODUCTS_KEY, JSON.stringify(updated));
     } catch (e) {}
+  };
+
+  const [editingMovement, setEditingMovement] = useState<InventoryMovement | null>(null);
+
+  const handleDeleteMovement = (id: string) => {
+    if (!confirm("Are you sure you want to delete this stock movement log entry?")) return;
+    const updated = movements.filter((m) => m.id !== id);
+    setMovements(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_MOVEMENTS_KEY, JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  const handleSaveEditMovement = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMovement) return;
+    const updated = movements.map((m) => (m.id === editingMovement.id ? editingMovement : m));
+    setMovements(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_MOVEMENTS_KEY, JSON.stringify(updated));
+    } catch (e) {}
+    setEditingMovement(null);
   };
 
   return (
@@ -379,6 +401,7 @@ export default function InventoryPage() {
                       <th className="py-3 px-3">Ref Doc #</th>
                       <th className="py-3 px-3">Quantity Delta</th>
                       <th className="py-3 px-3">User</th>
+                      <th className="py-3 px-3">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-sm text-slate-800">
@@ -407,6 +430,24 @@ export default function InventoryPage() {
                           </span>
                         </td>
                         <td className="py-3.5 px-3 text-xs text-slate-600 font-bold">{m.user}</td>
+                        <td className="py-3.5 px-3">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => setEditingMovement(m)}
+                              className="p-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                              title="Edit Movement Entry"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMovement(m.id)}
+                              className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200"
+                              title="Delete Movement Entry"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -497,6 +538,110 @@ export default function InventoryPage() {
                     className="px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-600 text-white text-xs font-extrabold shadow-md ring-2 ring-amber-400"
                   >
                     Update Stock & Log Movement
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* EDIT STOCK MOVEMENT MODAL */}
+        {editingMovement && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <div className="bg-white border-2 border-amber-500 rounded-2xl w-full max-w-lg p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
+              <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+                <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                  <History className="w-5 h-5 text-amber-600" />
+                  <span>Edit Stock Movement Log ({editingMovement.sku})</span>
+                </h3>
+                <button onClick={() => setEditingMovement(null)} className="text-slate-400 hover:text-slate-900 text-lg font-bold">✕</button>
+              </div>
+
+              <form onSubmit={handleSaveEditMovement} className="space-y-4 text-xs sm:text-sm">
+                <div>
+                  <label className="text-slate-800 font-extrabold block mb-1">Product SKU & Name</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={`${editingMovement.name} (${editingMovement.sku})`}
+                    className="w-full p-2.5 bg-slate-100 border-2 border-slate-200 rounded-xl text-xs font-semibold text-slate-700"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-slate-800 font-extrabold block mb-1">Quantity Delta (+/-)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={editingMovement.qty_delta}
+                      onChange={(e) => setEditingMovement({ ...editingMovement, qty_delta: Number(e.target.value) })}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-800 font-extrabold block mb-1">Reason</label>
+                    <select
+                      value={editingMovement.reason}
+                      onChange={(e) => setEditingMovement({ ...editingMovement, reason: e.target.value as any })}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs text-slate-900 font-semibold"
+                    >
+                      <option value="PURCHASE_RECEIPT">Purchase Receipt (+ Stock)</option>
+                      <option value="PRODUCTION_YIELD">Production Yield (+ Finished Goods)</option>
+                      <option value="PRODUCTION_CONSUMPTION">Production Consumption (- Raw Material)</option>
+                      <option value="SALES_DISPATCH">Sales Dispatch (- Client Delivery)</option>
+                      <option value="STOCK_ADJUSTMENT">Stock Adjustment (Audit)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-slate-800 font-extrabold block mb-1">Batch Lot #</label>
+                    <input
+                      type="text"
+                      value={editingMovement.batch_lot}
+                      onChange={(e) => setEditingMovement({ ...editingMovement, batch_lot: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono text-slate-900 font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-800 font-extrabold block mb-1">Ref Doc #</label>
+                    <input
+                      type="text"
+                      value={editingMovement.ref_doc}
+                      onChange={(e) => setEditingMovement({ ...editingMovement, ref_doc: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono text-slate-900 font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-slate-800 font-extrabold block mb-1">Logged User</label>
+                  <input
+                    type="text"
+                    value={editingMovement.user}
+                    onChange={(e) => setEditingMovement({ ...editingMovement, user: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs text-slate-900 font-semibold"
+                  />
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingMovement(null)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-extrabold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 text-xs font-extrabold shadow-md active:scale-95 transition-all"
+                  >
+                    Save Movement Log Changes
                   </button>
                 </div>
               </form>
