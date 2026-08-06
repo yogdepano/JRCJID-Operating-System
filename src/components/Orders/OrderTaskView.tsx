@@ -394,7 +394,8 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
           {filteredOrders.map((o) => {
             const deptResp = (o.current_department_responsible || "Sales").toLowerCase();
             const targetDept = activeDepartment.toLowerCase();
-            const isMyTurn = activeDepartment === "Admin" || deptResp === targetDept;
+            const isAdminDept = (activeDepartment as string) === "Admin";
+            const isMyTurn = isSuperAdmin || isAdminDept || (activeDepartment as string) === "Sales" || deptResp === targetDept;
 
             const requisitionTotal = o.requested_materials
               ? o.requested_materials.reduce((sum, item) => sum + (item.total_cost || 0), 0)
@@ -404,7 +405,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
               <div
                 key={o.id}
                 className={`p-3.5 rounded-xl border space-y-2.5 shadow-2xs transition-all bg-white ${
-                  isMyTurn ? "border-amber-400 ring-1 ring-amber-400/40" : "border-slate-200"
+                  isMyTurn ? "border-blue-500 ring-1 ring-blue-400/40" : "border-slate-200"
                 }`}
               >
                 {/* CARD HEADER: STATUS & RESPONSIBILITY BADGES */}
@@ -502,7 +503,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
 
                     <div className="flex flex-wrap gap-2">
                       {/* SALES ACTIONS */}
-                      {(activeDepartment === "Sales" || activeDepartment === "Admin") && (
+                      {(isSuperAdmin || activeDepartment === "Sales" || isAdminDept) && (
                         <>
                           {o.current_status === "Waiting for Sales" && (
                             <button
@@ -563,7 +564,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                       )}
 
                       {/* PRODUCTION ACTIONS */}
-                      {(activeDepartment === "Production" || activeDepartment === "Admin") && (
+                      {(isSuperAdmin || activeDepartment === "Production" || isAdminDept || activeDepartment === "Sales") && (
                         <>
                           {o.current_status === "Waiting for Production" && (
                             <>
@@ -614,7 +615,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                       )}
 
                       {/* FINANCE ACTIONS */}
-                      {(activeDepartment === "Finance" || activeDepartment === "Admin") && (
+                      {(isSuperAdmin || activeDepartment === "Finance" || isAdminDept || activeDepartment === "Sales") && (
                         <>
                           {o.current_status === "Waiting for Finance" && (
                             <>
@@ -655,7 +656,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                       )}
 
                       {/* LOGISTICS ACTIONS */}
-                      {(activeDepartment === "Logistics" || activeDepartment === "Admin") && (
+                      {(isSuperAdmin || activeDepartment === "Logistics" || isAdminDept || activeDepartment === "Sales") && (
                         <>
                           {o.current_status === "Waiting for Logistics" && (
                             <button
@@ -698,7 +699,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                       )}
 
                       {/* MARKETING ACTIONS */}
-                      {(activeDepartment === "Marketing" || activeDepartment === "Admin") && (
+                      {(isSuperAdmin || activeDepartment === "Marketing" || isAdminDept || activeDepartment === "Sales") && (
                         <>
                           {o.current_status === "Waiting for Marketing" && (
                             <button
