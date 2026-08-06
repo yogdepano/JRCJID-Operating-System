@@ -104,16 +104,19 @@ export function useUnifiedOrders() {
           };
         });
 
-        // Safely merge remote DB orders with local orders (retaining unsynced local orders)
+        // Safely merge remote DB orders with local orders without duplicate entries
         const orderMap = new Map<string, UnifiedOrder>();
-        // First seed with local orders
+
+        // Seed map strictly by order ID
         currentOrders.forEach((o) => {
           if (o.id) orderMap.set(o.id, o);
-          if (o.order_number) orderMap.set(o.order_number, o);
         });
-        // Merge DB orders
+
+        // Merge DB orders matching by ID or order_number
         remoteMapped.forEach((so) => {
-          const existingKey = Array.from(orderMap.keys()).find((k) => k === so.id || k === so.order_number);
+          const existingKey = Array.from(orderMap.keys()).find(
+            (k) => k === so.id || orderMap.get(k)?.order_number === so.order_number
+          );
           if (existingKey) {
             const existing = orderMap.get(existingKey)!;
             orderMap.set(existing.id, { ...so, ...existing });
@@ -122,8 +125,12 @@ export function useUnifiedOrders() {
           }
         });
 
+        // Ensure 100% unique order entries by ID and order_number
         currentOrders = Array.from(orderMap.values()).filter(
-          (o) => !deletedIds.includes(o.id) && !deletedIds.includes(o.order_number)
+          (o, index, self) =>
+            !deletedIds.includes(o.id) &&
+            !deletedIds.includes(o.order_number) &&
+            self.findIndex((item) => item.id === o.id || (item.order_number && item.order_number === o.order_number)) === index
         );
       }
     } catch (err) {
@@ -184,9 +191,13 @@ export function useUnifiedOrders() {
   }, []);
 
   const saveOrders = (updated: UnifiedOrder[]) => {
-    setOrders(updated);
+    const deduped = updated.filter(
+      (o, index, self) =>
+        self.findIndex((item) => item.id === o.id || (item.order_number && item.order_number === o.order_number)) === index
+    );
+    setOrders(deduped);
     try {
-      localStorage.setItem(LOCAL_STORAGE_UNIFIED_KEY, JSON.stringify(updated));
+      localStorage.setItem(LOCAL_STORAGE_UNIFIED_KEY, JSON.stringify(deduped));
     } catch (e) {
       console.error("Error saving orders to localStorage:", e);
     }
