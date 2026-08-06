@@ -92,43 +92,62 @@ export default function PestControlPage() {
 
   const handleCreateDispatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newJobNo = `PC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const newJob: ServiceJob = {
-      id: `pc-${Date.now()}`,
-      job_number: newJobNo,
-      client_name: clientName,
-      service_address: serviceAddress,
-      target_pest: targetPest,
-      technician: technician,
-      service_date: serviceDate,
-      notes: notes,
-      status: "SCHEDULED",
-    };
+    if (editingJobId) {
+      const updated = jobs.map((j) =>
+        j.id === editingJobId
+          ? {
+              ...j,
+              client_name: clientName,
+              service_address: serviceAddress,
+              target_pest: targetPest,
+              technician: technician,
+              service_date: serviceDate,
+              notes: notes,
+            }
+          : j
+      );
+      setJobs(updated);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {}
+      setEditingJobId(null);
+    } else {
+      const newJobNo = `PC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const updated = [newJob, ...jobs];
-    setJobs(updated);
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
-    } catch (e) {
-      console.error("Pest control write error:", e);
+      const newJob: ServiceJob = {
+        id: `pc-${Date.now()}`,
+        job_number: newJobNo,
+        client_name: clientName,
+        service_address: serviceAddress,
+        target_pest: targetPest,
+        technician: technician,
+        service_date: serviceDate,
+        notes: notes,
+        status: "SCHEDULED",
+      };
+
+      const updated = [newJob, ...jobs];
+      setJobs(updated);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.error("Pest control write error:", e);
+      }
+
+      try {
+        const supabase = createClient();
+        await supabase.from("pest_control_jobs").insert({
+          job_number: newJobNo,
+          service_address: serviceAddress || clientName,
+          scheduled_date: new Date(serviceDate).toISOString(),
+          status: "SCHEDULED",
+          notes: `${targetPest} — ${notes}`,
+        });
+      } catch (err) {}
     }
 
     setIsModalOpen(false);
-
-    try {
-      const supabase = createClient();
-      await supabase.from("pest_control_jobs").insert({
-        job_number: newJobNo,
-        service_address: serviceAddress || clientName,
-        scheduled_date: new Date(serviceDate).toISOString(),
-        status: "SCHEDULED",
-        notes: `${targetPest} — ${notes}`,
-      });
-    } catch (err) {
-      console.error("Supabase pest control insert notice:", err);
-    }
-
     setClientName("");
     setServiceAddress("");
     setNotes("");
@@ -151,8 +170,21 @@ export default function PestControlPage() {
     }
   };
 
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
+
+  const handleOpenEditJob = (j: ServiceJob) => {
+    setEditingJobId(j.id);
+    setClientName(j.client_name);
+    setServiceAddress(j.service_address || "");
+    setTargetPest(j.target_pest);
+    setTechnician(j.technician);
+    setServiceDate(j.service_date);
+    setNotes(j.notes || "");
+    setIsModalOpen(true);
+  };
+
   const handleDeleteJob = (jobId: string) => {
-    if (!confirm("Are you sure you want to cancel and delete this service dispatch record?")) return;
+    if (!confirm("Are you sure you want to cancel and delete this service record?")) return;
     const updated = jobs.filter((j) => j.id !== jobId);
     setJobs(updated);
     try {
@@ -286,13 +318,22 @@ export default function PestControlPage() {
                       </button>
                     </td>
                     <td className="py-3.5 px-3">
-                      <button
-                        onClick={() => handleDeleteJob(j.id)}
-                        className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200"
-                        title="Delete Job"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleOpenEditJob(j)}
+                          className="p-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                          title="Edit Job Details"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteJob(j.id)}
+                          className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200"
+                          title="Delete Job"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

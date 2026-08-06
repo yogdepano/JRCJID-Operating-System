@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Truck, Search, History, Package, ArrowDownRight, ArrowUpRight, Plus, Layers } from "lucide-react";
+import { Truck, Search, History, Package, ArrowDownRight, ArrowUpRight, Plus, Layers, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
@@ -164,8 +164,17 @@ export default function InventoryPage() {
 
   const totalStockValuation = inventoryList.reduce((acc, item) => acc + item.current_stock * item.unit_cost, 0);
 
+  const handleDeleteInventoryItem = (sku: string) => {
+    if (!confirm(`Are you sure you want to delete SKU ${sku} from Logistics inventory?`)) return;
+    const updated = inventoryList.filter((i) => i.sku !== sku);
+    setInventoryList(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_PRODUCTS_KEY, JSON.stringify(updated));
+    } catch (e) {}
+  };
+
   return (
-    <RoleGuard allowedRoles={["super_admin", "production_manager", "production_lead", "purchasing_officer", "logistics_driver"]} moduleName="Logistics & Stock Warehouse Ledger">
+    <RoleGuard allowedRoles={["super_admin", "production_manager", "production_lead", "purchasing_officer", "logistics_driver"]} moduleName="Logistics & Inventory Control">
       <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
@@ -318,15 +327,24 @@ export default function InventoryPage() {
                           </span>
                         </td>
                         <td className="py-3.5 px-3">
-                          <button
-                            onClick={() => {
-                              setAdjustSku(item.sku);
-                              setIsAdjustModalOpen(true);
-                            }}
-                            className="px-3 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 text-xs font-extrabold transition-all"
-                          >
-                            + Adjust Stock
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                setAdjustSku(item.sku);
+                                setIsAdjustModalOpen(true);
+                              }}
+                              className="px-3 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 text-xs font-extrabold transition-all"
+                            >
+                              + Adjust Stock
+                            </button>
+                            <button
+                              onClick={() => handleDeleteInventoryItem(item.sku)}
+                              className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200"
+                              title="Delete Item from Inventory"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

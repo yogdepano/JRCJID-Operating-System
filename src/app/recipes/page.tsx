@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { FlaskConical, Plus, Scale, Factory, CheckCircle2, Clock } from "lucide-react";
+import { FlaskConical, Plus, Scale, Factory, CheckCircle2, Clock, Trash2, Edit } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
 import { RoleGuard } from "@/components/Auth/RoleGuard";
@@ -170,6 +170,28 @@ export default function RecipesPage() {
     setFormIngredients([]);
   };
 
+  const handleDeleteRecipe = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this chemical formula recipe?")) return;
+    const updated = recipes.filter((r) => r.id !== id);
+    setRecipes(updated);
+    if (selectedRecipe?.id === id) {
+      setSelectedRecipe(updated[0] || null);
+    }
+    try {
+      localStorage.setItem(LOCAL_STORAGE_RECIPES_KEY, JSON.stringify(updated));
+    } catch (err) {}
+  };
+
+  const handleEditRecipe = (r: BoMRecipe, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setProductName(r.finished_product_name);
+    setProductSku(r.finished_product_sku);
+    setProductUnit(r.batch_yield_uom);
+    setFormIngredients(r.ingredients || []);
+    setIsModalOpen(true);
+  };
+
   const scalingMultiplier = selectedRecipe ? targetBatchQty / (selectedRecipe.batch_yield_qty || 1) : 1;
 
   return (
@@ -222,13 +244,13 @@ export default function RecipesPage() {
               <div className="space-y-2">
                 <h4 className="text-xs font-extrabold text-blue-700 uppercase tracking-wider">Product Formulas ({recipes.length})</h4>
                 {recipes.map((r) => (
-                  <button
+                  <div
                     key={r.id}
                     onClick={() => {
                       setSelectedRecipe(r);
                       setTargetBatchQty(r.batch_yield_qty * 2);
                     }}
-                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-all cursor-pointer relative group ${
                       selectedRecipe?.id === r.id
                         ? "bg-blue-50 border-blue-600 shadow-sm"
                         : "bg-slate-50 border-slate-200 hover:bg-white"
@@ -236,11 +258,27 @@ export default function RecipesPage() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-xs font-extrabold text-blue-700">{r.finished_product_sku}</span>
-                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-slate-200 text-slate-800">{r.version}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-slate-200 text-slate-800">{r.version}</span>
+                        <button
+                          onClick={(e) => handleEditRecipe(r, e)}
+                          className="p-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                          title="Edit Formula"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteRecipe(r.id, e)}
+                          className="p-1 rounded bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors"
+                          title="Delete Formula"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <h4 className="text-sm font-extrabold text-slate-900 mt-1">{r.finished_product_name}</h4>
                     <p className="text-xs text-slate-600 font-medium mt-1">Standard Batch: {r.batch_yield_qty} {r.batch_yield_uom} ({r.ingredients.length} ingredients)</p>
-                  </button>
+                  </div>
                 ))}
               </div>
 

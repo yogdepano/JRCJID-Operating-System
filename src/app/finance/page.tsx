@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { DollarSign, FileText, Search } from "lucide-react";
+import { DollarSign, FileText, Search, Trash2, Edit3 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
@@ -100,6 +100,29 @@ export default function FinancePage() {
   const totalAR = invoices.reduce((acc, inv) => acc + inv.grand_total, 0);
   const totalVat = invoices.reduce((acc, inv) => acc + inv.vat_amount, 0);
   const paidCount = invoices.filter((i) => i.status === "PAID").length;
+
+  const handleDeleteInvoice = (id: string) => {
+    if (!confirm("Are you sure you want to delete this invoice record from Finance?")) return;
+    const updated = invoices.filter((i) => i.id !== id);
+    setInvoices(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_SALES_KEY, JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  const handleToggleInvoiceStatus = (id: string) => {
+    const cycle: Record<InvoiceRecord["status"], InvoiceRecord["status"]> = {
+      UNPAID: "PAID",
+      PAID: "OVERDUE",
+      OVERDUE: "UNPAID",
+      PARTIALLY_PAID: "PAID",
+    };
+    const updated = invoices.map((inv) => (inv.id === id ? { ...inv, status: cycle[inv.status] } : inv));
+    setInvoices(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_SALES_KEY, JSON.stringify(updated));
+    } catch (e) {}
+  };
 
   const filteredInvoices = invoices.filter((inv) => {
     const matchesSearch = inv.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) || inv.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) || inv.so_number.toLowerCase().includes(searchTerm.toLowerCase());
@@ -228,15 +251,19 @@ export default function FinancePage() {
                     <td className="py-3.5 px-3 font-mono font-semibold text-slate-700">₱{inv.vat_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     <td className="py-3.5 px-3 font-mono font-extrabold text-slate-900">₱{inv.grand_total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     <td className="py-3.5 px-3">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${
-                        inv.status === "PAID"
-                          ? "bg-emerald-500 text-white"
-                          : inv.status === "OVERDUE"
-                          ? "bg-rose-600 text-white animate-pulse"
-                          : "bg-orange-500 text-white"
-                      }`}>
-                        {inv.status === "PAID" ? "Received (Paid)" : inv.status === "OVERDUE" ? "Delay (Overdue)" : "In Progress"}
-                      </span>
+                      <button
+                        onClick={() => handleToggleInvoiceStatus(inv.id)}
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold cursor-pointer border transition-all ${
+                          inv.status === "PAID"
+                            ? "bg-emerald-500 text-white border-emerald-600"
+                            : inv.status === "OVERDUE"
+                            ? "bg-rose-600 text-white border-rose-700 animate-pulse"
+                            : "bg-orange-500 text-white border-orange-600"
+                        }`}
+                        title="Click to toggle status (UNPAID -> PAID -> OVERDUE)"
+                      >
+                        {inv.status === "PAID" ? "✓ Paid" : inv.status === "OVERDUE" ? "⚠ Overdue" : "⏳ Unpaid"}
+                      </button>
                     </td>
                     <td className="py-3.5 px-3">
                       <div className="flex items-center gap-1.5">
@@ -254,6 +281,13 @@ export default function FinancePage() {
                           <FileText className="w-3.5 h-3.5 text-amber-600" />
                           <span>DR</span>
                         </Link>
+                        <button
+                          onClick={() => handleDeleteInvoice(inv.id)}
+                          className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200"
+                          title="Delete Invoice"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
