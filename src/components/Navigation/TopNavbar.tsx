@@ -18,7 +18,7 @@ import {
   X,
   UserCheck
 } from "lucide-react";
-import { useUserRole, RoleCode } from "@/lib/auth/useUserRole";
+import { useUserRole, RoleCode, setRoleOverride, ROLE_LABELS } from "@/lib/auth/useUserRole";
 import { TopStatusProgress } from "@/components/Navigation/TopStatusProgress";
 
 interface NavItem {
@@ -30,15 +30,15 @@ interface NavItem {
 
 const mainDepartmentNav: NavItem[] = [
   { name: "Home", href: "/", icon: LayoutDashboard },
-  { name: "Sales", href: "/sales", icon: ShoppingCart, allowedRoles: ["super_admin", "sales_rep", "finance_manager"] },
+  { name: "Sales", href: "/sales", icon: ShoppingCart, allowedRoles: ["super_admin", "sales_rep"] },
   { name: "Finance", href: "/finance", icon: DollarSign, allowedRoles: ["super_admin", "finance_manager"] },
-  { name: "Marketing", href: "/products", icon: Target },
+  { name: "Marketing", href: "/products", icon: Target, allowedRoles: ["super_admin", "sales_rep", "purchasing_officer"] },
   { name: "Production", href: "/recipes", icon: Factory, allowedRoles: ["super_admin", "production_manager", "production_lead"] },
   { name: "Logistics", href: "/inventory", icon: Truck, allowedRoles: ["super_admin", "production_manager", "production_lead", "purchasing_officer", "logistics_driver"] },
 ];
 
 const secondaryNav: NavItem[] = [
-  { name: "Product Catalog", href: "/products", icon: Package },
+  { name: "Product Catalog", href: "/products", icon: Package, allowedRoles: ["super_admin", "sales_rep", "purchasing_officer", "production_manager"] },
   { name: "Pest Control", href: "/pest-control", icon: Bug, allowedRoles: ["super_admin", "sales_rep", "pest_control_tech", "purchasing_officer", "logistics_driver"] },
   { name: "User Security", href: "/users", icon: ShieldCheck, allowedRoles: ["super_admin"] },
   { name: "Document Vault", href: "/documents", icon: FileText, allowedRoles: ["super_admin", "sales_rep", "finance_manager"] },
@@ -104,11 +104,22 @@ export function TopNavbar() {
             })}
           </nav>
 
-          {/* USER ROLE BADGE & SECURITY DRAWER TOGGLE */}
+          {/* USER ROLE SELECTOR DROPDOWN & SECURITY DRAWER TOGGLE */}
           <div className="flex items-center gap-2 shrink-0">
-            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 border border-blue-200 text-xs font-extrabold text-blue-900">
-              <UserCheck className="w-4 h-4 text-blue-700" />
-              <span>{roleName}</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-50 border border-blue-200 text-xs font-extrabold text-blue-900">
+              <UserCheck className="w-4 h-4 text-blue-700 shrink-0" />
+              <select
+                value={role || "super_admin"}
+                onChange={(e) => setRoleOverride(e.target.value as RoleCode)}
+                className="bg-transparent font-extrabold text-xs text-blue-900 cursor-pointer focus:outline-none"
+                title="Switch active role for UI testing"
+              >
+                {(Object.keys(ROLE_LABELS) as RoleCode[]).map((rCode) => (
+                  <option key={rCode} value={rCode}>
+                    {ROLE_LABELS[rCode]}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <button

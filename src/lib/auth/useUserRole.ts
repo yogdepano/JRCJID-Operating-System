@@ -21,6 +21,24 @@ export interface UserRoleState {
   loading: boolean;
 }
 
+export const ROLE_LABELS: Record<RoleCode, string> = {
+  super_admin: "Super Administrator",
+  sales_rep: "Sales Representative",
+  finance_manager: "Finance Manager",
+  production_manager: "Production Manager",
+  production_lead: "Production Lead",
+  purchasing_officer: "Purchasing Officer",
+  logistics_driver: "Logistics Driver",
+  pest_control_tech: "Pest Control Technician",
+};
+
+export function setRoleOverride(newRole: RoleCode) {
+  try {
+    localStorage.setItem("jrc_active_role_override", newRole);
+    window.dispatchEvent(new Event("jrc_role_changed"));
+  } catch (err) {}
+}
+
 export function useUserRole(): UserRoleState {
   const [roleState, setRoleState] = useState<UserRoleState>({
     role: null,
@@ -33,12 +51,25 @@ export function useUserRole(): UserRoleState {
   useEffect(() => {
     async function fetchRole() {
       try {
+        const override = localStorage.getItem("jrc_active_role_override") as RoleCode | null;
+
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
+        if (override && ROLE_LABELS[override]) {
+          setRoleState({
+            role: override,
+            roleName: ROLE_LABELS[override],
+            email: user?.email || `${override}@jrcindustrial.ph`,
+            userId: user?.id || null,
+            loading: false,
+          });
+          return;
+        }
+
         if (!user) {
           setRoleState({
-            role: "super_admin", // Default fallback if unauthenticated demo
+            role: "super_admin",
             roleName: "Super Administrator",
             email: "admin@jrcindustrial.ph",
             userId: null,
@@ -83,6 +114,15 @@ export function useUserRole(): UserRoleState {
     }
 
     fetchRole();
+
+    const handleRoleChange = () => {
+      fetchRole();
+    };
+
+    window.addEventListener("jrc_role_changed", handleRoleChange);
+    return () => {
+      window.removeEventListener("jrc_role_changed", handleRoleChange);
+    };
   }, []);
 
   return roleState;
