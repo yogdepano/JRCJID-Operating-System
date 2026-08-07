@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { FlaskConical, Plus, Scale, Factory, CheckCircle2, Clock, Trash2, Edit } from "lucide-react";
+import { FlaskConical, Plus, Scale, Factory, CheckCircle2, Clock, Trash2, Edit, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
 import { RoleGuard } from "@/components/Auth/RoleGuard";
@@ -414,23 +414,26 @@ export default function RecipesPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-slate-800 font-extrabold block mb-1">Unit (Type or Pick Preset)</label>
-                    <input
-                      type="text"
-                      list="product_unit_datalist"
-                      value={productUnit}
-                      onChange={(e) => setProductUnit(e.target.value)}
-                      placeholder="e.g. Drum (200L), Liters, KG"
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-extrabold text-slate-900 focus:border-blue-600 focus:outline-none"
-                    />
-                    <datalist id="product_unit_datalist">
-                      <option value="Drum (200L)">Drum (200L)</option>
-                      <option value="Pail (20L)">Pail (20L)</option>
-                      <option value="Gallon (4L)">Gallon (4L)</option>
-                      <option value="Bottle (1L)">Bottle (1L)</option>
-                      <option value="L (Liters)">L (Liters)</option>
-                      <option value="KG (Kilograms)">KG (Kilograms)</option>
-                      <option value="PCS">PCS</option>
-                    </datalist>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        list="product_unit_datalist"
+                        value={productUnit}
+                        onChange={(e) => setProductUnit(e.target.value)}
+                        placeholder="e.g. Drum (200L), Liters, KG"
+                        className="w-full pr-8 p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-extrabold text-slate-900 focus:border-blue-600 focus:outline-none"
+                      />
+                      <ChevronDown className="w-4 h-4 text-slate-500 font-extrabold absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <datalist id="product_unit_datalist">
+                        <option value="Drum (200L)">Drum (200L)</option>
+                        <option value="Pail (20L)">Pail (20L)</option>
+                        <option value="Gallon (4L)">Gallon (4L)</option>
+                        <option value="Bottle (1L)">Bottle (1L)</option>
+                        <option value="L (Liters)">L (Liters)</option>
+                        <option value="KG (Kilograms)">KG (Kilograms)</option>
+                        <option value="PCS">PCS</option>
+                      </datalist>
+                    </div>
                   </div>
 
                   <div>
@@ -470,21 +473,24 @@ export default function RecipesPage() {
                       <div key={idx} className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200">
                         <div className="flex-1">
                           <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Ingredient #{idx + 1} (Type or Pick Raw Material)</label>
-                          <input
-                            type="text"
-                            list={`ing_rm_datalist_${idx}`}
-                            value={ing.name || ""}
-                            onChange={(e) => handleUpdateIngredient(idx, "name", e.target.value)}
-                            placeholder="Type raw material name..."
-                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
-                          />
-                          <datalist id={`ing_rm_datalist_${idx}`}>
-                            {rawMaterialsList.map((p) => (
-                              <option key={p.sku} value={p.name}>
-                                {p.name} ({p.sku})
-                              </option>
-                            ))}
-                          </datalist>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              list={`ing_rm_datalist_${idx}`}
+                              value={ing.name || ""}
+                              onChange={(e) => handleUpdateIngredient(idx, "name", e.target.value)}
+                              placeholder="Type raw material name..."
+                              className="w-full pr-7 p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
+                            />
+                            <ChevronDown className="w-3.5 h-3.5 text-slate-500 font-extrabold absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <datalist id={`ing_rm_datalist_${idx}`}>
+                              {rawMaterialsList.map((p) => (
+                                <option key={p.sku} value={p.name}>
+                                  {p.name} ({p.sku})
+                                </option>
+                              ))}
+                            </datalist>
+                          </div>
                         </div>
 
                         <div className="w-24">
@@ -501,21 +507,24 @@ export default function RecipesPage() {
 
                         <div className="w-24">
                           <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Unit</label>
-                          <input
-                            type="text"
-                            list={`ing_uom_datalist_${idx}`}
-                            value={ing.uom}
-                            onChange={(e) => handleUpdateIngredient(idx, "uom", e.target.value)}
-                            placeholder="Liters, KG..."
-                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
-                          />
-                          <datalist id={`ing_uom_datalist_${idx}`}>
-                            <option value="Liters">Liters</option>
-                            <option value="KG">KG</option>
-                            <option value="Grams">Grams</option>
-                            <option value="mL">mL</option>
-                            <option value="PCS">PCS</option>
-                          </datalist>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              list={`ing_uom_datalist_${idx}`}
+                              value={ing.uom}
+                              onChange={(e) => handleUpdateIngredient(idx, "uom", e.target.value)}
+                              placeholder="Liters, KG..."
+                              className="w-full pr-7 p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
+                            />
+                            <ChevronDown className="w-3.5 h-3.5 text-slate-500 font-extrabold absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <datalist id={`ing_uom_datalist_${idx}`}>
+                              <option value="Liters">Liters</option>
+                              <option value="KG">KG</option>
+                              <option value="Grams">Grams</option>
+                              <option value="mL">mL</option>
+                              <option value="PCS">PCS</option>
+                            </datalist>
+                          </div>
                         </div>
 
                         <button

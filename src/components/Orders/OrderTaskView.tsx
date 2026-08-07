@@ -26,7 +26,8 @@ import {
   Trash2,
   Pencil,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  ChevronDown
 } from "lucide-react";
 import Link from "next/link";
 
@@ -852,21 +853,24 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                         <label className="text-slate-800 font-extrabold block mb-1">
                           Raw Material Name (Type or Select Catalog)
                         </label>
-                        <input
-                          type="text"
-                          list={`datalist_mat_${item.id}`}
-                          value={item.material_name || ""}
-                          onChange={(e) => handleUpdateRequisitionItem(item.id, "material_name", e.target.value)}
-                          placeholder="Type custom material or pick catalog..."
-                          className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-extrabold focus:border-blue-600 focus:outline-none"
-                        />
-                        <datalist id={`datalist_mat_${item.id}`}>
-                          {catalogProducts.map((p) => (
-                            <option key={p.sku} value={p.name}>
-                              {p.name} ({p.sku} — Supplier: {p.supplier_name || "Vendor"} ₱{Number(p.supplier_price || p.unit_cost || 0).toFixed(2)}/{p.uom || "unit"})
-                            </option>
-                          ))}
-                        </datalist>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            list={`datalist_mat_${item.id}`}
+                            value={item.material_name || ""}
+                            onChange={(e) => handleUpdateRequisitionItem(item.id, "material_name", e.target.value)}
+                            placeholder="Type custom material or pick catalog..."
+                            className="w-full pr-8 p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-extrabold focus:border-blue-600 focus:outline-none"
+                          />
+                          <ChevronDown className="w-4 h-4 text-slate-500 font-extrabold absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          <datalist id={`datalist_mat_${item.id}`}>
+                            {catalogProducts.map((p) => (
+                              <option key={p.sku} value={p.name}>
+                                {p.name} ({p.sku} — Supplier: {p.supplier_name || "Vendor"} ₱{Number(p.supplier_price || p.unit_cost || 0).toFixed(2)}/{p.uom || "unit"})
+                              </option>
+                            ))}
+                          </datalist>
+                        </div>
                       </div>
 
                       <div>

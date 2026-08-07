@@ -30,3 +30,15 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #2563eb;
 }
+
+/* Ensure datalist dropdown arrows are clearly visible on hybrid combobox inputs */
+input[list]::-webkit-calendar-picker-indicator {
+  opacity: 0.8 !important;
+  cursor: pointer;
+  filter: invert(0.3);
+  transition: opacity 0.2s ease;
+  padding: 2px;
+}
+input[list]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1 !important;
+}
