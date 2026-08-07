@@ -104,11 +104,17 @@ export default function RecipesPage() {
       formIngredients.map((ing, i) => {
         if (i === index) {
           const updated = { ...ing, [field]: value };
-          if (field === "raw_material_sku") {
-            const p = availableProducts.find((item) => item.sku === value);
+          if (field === "name" || field === "raw_material_sku") {
+            const p = availableProducts.find(
+              (item) => item.sku.toLowerCase() === String(value).toLowerCase() || item.name.toLowerCase() === String(value).toLowerCase()
+            );
             if (p) {
+              updated.raw_material_sku = p.sku;
               updated.name = p.name;
-              updated.uom = p.uom || "KG";
+              updated.uom = p.uom || updated.uom || "KG";
+            } else {
+              updated.name = value;
+              if (!updated.raw_material_sku) updated.raw_material_sku = `RM-CUSTOM-${Date.now().toString().slice(-4)}`;
             }
           }
           return updated;
@@ -407,12 +413,16 @@ export default function RecipesPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Unit</label>
-                    <select
+                    <label className="text-slate-800 font-extrabold block mb-1">Unit (Type or Pick Preset)</label>
+                    <input
+                      type="text"
+                      list="product_unit_datalist"
                       value={productUnit}
                       onChange={(e) => setProductUnit(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:border-blue-600 focus:outline-none"
-                    >
+                      placeholder="e.g. Drum (200L), Liters, KG"
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-extrabold text-slate-900 focus:border-blue-600 focus:outline-none"
+                    />
+                    <datalist id="product_unit_datalist">
                       <option value="Drum (200L)">Drum (200L)</option>
                       <option value="Pail (20L)">Pail (20L)</option>
                       <option value="Gallon (4L)">Gallon (4L)</option>
@@ -420,7 +430,7 @@ export default function RecipesPage() {
                       <option value="L (Liters)">L (Liters)</option>
                       <option value="KG (Kilograms)">KG (Kilograms)</option>
                       <option value="PCS">PCS</option>
-                    </select>
+                    </datalist>
                   </div>
 
                   <div>
@@ -444,7 +454,7 @@ export default function RecipesPage() {
                       <span className="text-xs font-extrabold text-blue-700 uppercase tracking-wider block">
                         Formula (Bill of Materials)
                       </span>
-                      <span className="text-[11px] text-slate-500 font-medium">Select ingredients from Supplier Raw Materials</span>
+                      <span className="text-[11px] text-slate-500 font-medium">Select or type any raw material ingredient</span>
                     </div>
                     <button
                       type="button"
@@ -459,22 +469,22 @@ export default function RecipesPage() {
                     {formIngredients.map((ing, idx) => (
                       <div key={idx} className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200">
                         <div className="flex-1">
-                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Ingredient #{idx + 1} (Supplier Raw Material)</label>
-                          <select
-                            value={ing.raw_material_sku}
-                            onChange={(e) => handleUpdateIngredient(idx, "raw_material_sku", e.target.value)}
-                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900"
-                          >
-                            {rawMaterialsList.length > 0 ? (
-                              rawMaterialsList.map((p) => (
-                                <option key={p.sku} value={p.sku}>
-                                  {p.name} ({p.sku})
-                                </option>
-                              ))
-                            ) : (
-                              <option value="RM-001">Supplier Raw Material (RM-001)</option>
-                            )}
-                          </select>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Ingredient #{idx + 1} (Type or Pick Raw Material)</label>
+                          <input
+                            type="text"
+                            list={`ing_rm_datalist_${idx}`}
+                            value={ing.name || ""}
+                            onChange={(e) => handleUpdateIngredient(idx, "name", e.target.value)}
+                            placeholder="Type raw material name..."
+                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
+                          />
+                          <datalist id={`ing_rm_datalist_${idx}`}>
+                            {rawMaterialsList.map((p) => (
+                              <option key={p.sku} value={p.name}>
+                                {p.name} ({p.sku})
+                              </option>
+                            ))}
+                          </datalist>
                         </div>
 
                         <div className="w-24">
@@ -491,17 +501,21 @@ export default function RecipesPage() {
 
                         <div className="w-24">
                           <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Unit</label>
-                          <select
+                          <input
+                            type="text"
+                            list={`ing_uom_datalist_${idx}`}
                             value={ing.uom}
                             onChange={(e) => handleUpdateIngredient(idx, "uom", e.target.value)}
-                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900"
-                          >
+                            placeholder="Liters, KG..."
+                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
+                          />
+                          <datalist id={`ing_uom_datalist_${idx}`}>
                             <option value="Liters">Liters</option>
                             <option value="KG">KG</option>
                             <option value="Grams">Grams</option>
                             <option value="mL">mL</option>
                             <option value="PCS">PCS</option>
-                          </select>
+                          </datalist>
                         </div>
 
                         <button

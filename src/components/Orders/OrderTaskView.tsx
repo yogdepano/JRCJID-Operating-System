@@ -206,13 +206,19 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
         if (item.id !== id) return item;
         const updated = { ...item, [field]: value };
 
-        if (field === "material_sku") {
-          const prod = catalogProducts.find((p) => p.sku === value);
+        if (field === "material_name" || field === "material_sku") {
+          const prod = catalogProducts.find(
+            (p) => p.sku.toLowerCase() === String(value).toLowerCase() || p.name.toLowerCase() === String(value).toLowerCase()
+          );
           if (prod) {
+            updated.material_sku = prod.sku;
             updated.material_name = prod.name;
-            updated.uom = prod.uom || "KG";
-            updated.supplier_name = prod.supplier_name || "Chemical Supplier";
-            updated.estimated_unit_cost = Number(prod.supplier_price || prod.unit_cost) || 150;
+            updated.uom = prod.uom || updated.uom || "KG";
+            updated.supplier_name = prod.supplier_name || updated.supplier_name || "Chemical Supplier";
+            updated.estimated_unit_cost = Number(prod.supplier_price || prod.unit_cost) || updated.estimated_unit_cost || 150;
+          } else {
+            updated.material_name = value;
+            if (!updated.material_sku) updated.material_sku = `RM-CUSTOM-${Date.now().toString().slice(-4)}`;
           }
         }
 
@@ -843,18 +849,24 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-slate-800 font-extrabold block mb-1">Select Raw Material from Catalog</label>
-                        <select
-                          value={item.material_sku}
-                          onChange={(e) => handleUpdateRequisitionItem(item.id, "material_sku", e.target.value)}
-                          className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-bold"
-                        >
+                        <label className="text-slate-800 font-extrabold block mb-1">
+                          Raw Material Name (Type or Select Catalog)
+                        </label>
+                        <input
+                          type="text"
+                          list={`datalist_mat_${item.id}`}
+                          value={item.material_name || ""}
+                          onChange={(e) => handleUpdateRequisitionItem(item.id, "material_name", e.target.value)}
+                          placeholder="Type custom material or pick catalog..."
+                          className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-extrabold focus:border-blue-600 focus:outline-none"
+                        />
+                        <datalist id={`datalist_mat_${item.id}`}>
                           {catalogProducts.map((p) => (
-                            <option key={p.sku} value={p.sku}>
+                            <option key={p.sku} value={p.name}>
                               {p.name} ({p.sku} — Supplier: {p.supplier_name || "Vendor"} ₱{Number(p.supplier_price || p.unit_cost || 0).toFixed(2)}/{p.uom || "unit"})
                             </option>
                           ))}
-                        </select>
+                        </datalist>
                       </div>
 
                       <div>

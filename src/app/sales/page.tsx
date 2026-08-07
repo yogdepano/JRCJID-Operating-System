@@ -150,16 +150,22 @@ export default function SalesPage() {
 
         let updated = { ...item, [field]: value };
 
-        if (field === "product_sku") {
-          const prod = availableProducts.find((p) => p.sku === value);
+        if (field === "product_sku" || field === "product_name") {
+          const prod = availableProducts.find(
+            (p) => p.sku.toLowerCase() === String(value).toLowerCase() || p.name.toLowerCase() === String(value).toLowerCase()
+          );
           if (prod) {
+            updated.product_sku = prod.sku;
             updated.product_name = prod.name;
             updated.unit_price = prod.base_price;
-            updated.uom = prod.default_uom;
+            updated.uom = prod.default_uom || updated.uom || "Liters";
+          } else {
+            updated.product_name = value;
+            if (!updated.product_sku) updated.product_sku = `CUSTOM-${Date.now().toString().slice(-4)}`;
           }
         }
 
-        if (field === "qty" || field === "unit_price" || field === "product_sku") {
+        if (field === "qty" || field === "unit_price" || field === "product_sku" || field === "product_name") {
           const qty = field === "qty" ? Number(value) : updated.qty;
           const price = field === "unit_price" ? Number(value) : updated.unit_price;
           updated.total_price = qty * price;
@@ -477,18 +483,22 @@ export default function SalesPage() {
                           </div>
 
                           <div>
-                            <label className="text-slate-800 block mb-1 text-xs font-extrabold">Select Product Item & Variant from Catalog</label>
-                            <select
-                              value={item.product_sku}
-                              onChange={(e) => handleUpdateLineItem(item.id, "product_sku", e.target.value)}
-                              className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-semibold"
-                            >
+                            <label className="text-slate-800 block mb-1 text-xs font-extrabold">Product Item & Variant (Type or Pick Catalog)</label>
+                            <input
+                              type="text"
+                              list={`sales_prod_list_${item.id}`}
+                              value={item.product_name || ""}
+                              onChange={(e) => handleUpdateLineItem(item.id, "product_name", e.target.value)}
+                              placeholder="Type product name or select catalog item..."
+                              className="w-full p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-bold focus:border-blue-600 focus:outline-none"
+                            />
+                            <datalist id={`sales_prod_list_${item.id}`}>
                               {availableProducts.map((p) => (
-                                <option key={p.sku} value={p.sku}>
+                                <option key={p.sku} value={p.name}>
                                   {p.name} ({p.sku} — ₱{p.base_price.toFixed(2)} / {p.default_uom})
                                 </option>
                               ))}
-                            </select>
+                            </datalist>
                           </div>
 
                           <div className="grid grid-cols-3 gap-2">
@@ -504,18 +514,22 @@ export default function SalesPage() {
                               />
                             </div>
                             <div>
-                              <label className="text-slate-800 block mb-1 text-xs font-extrabold">Unit of Measure (UOM)</label>
-                              <select
-                                value={item.uom}
+                              <label className="text-slate-800 block mb-1 text-xs font-extrabold">Unit (UOM)</label>
+                              <input
+                                type="text"
+                                list={`sales_uom_list_${item.id}`}
+                                value={item.uom || ""}
                                 onChange={(e) => handleUpdateLineItem(item.id, "uom", e.target.value)}
-                                className="w-full p-2 bg-white border-2 border-slate-200 rounded-xl text-xs font-semibold"
-                              >
+                                placeholder="e.g. Liters, Drums, KG"
+                                className="w-full p-2 bg-white border-2 border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
+                              />
+                              <datalist id={`sales_uom_list_${item.id}`}>
                                 {UOM_OPTIONS.map((u) => (
                                   <option key={u} value={u}>
                                     {u}
                                   </option>
                                 ))}
-                              </select>
+                              </datalist>
                             </div>
                             <div>
                               <label className="text-slate-800 block mb-1 text-xs font-extrabold">Item Subtotal (₱)</label>
