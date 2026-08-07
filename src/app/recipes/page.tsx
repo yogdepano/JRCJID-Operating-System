@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
 import { RoleGuard } from "@/components/Auth/RoleGuard";
 import { OrderTaskView } from "@/components/Orders/OrderTaskView";
+import { ComboboxInput } from "@/components/ui/ComboboxInput";
 
 interface IngredientItem {
   raw_material_sku: string;
@@ -414,26 +415,13 @@ export default function RecipesPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-slate-800 font-extrabold block mb-1">Unit (Type or Pick Preset)</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        list="product_unit_datalist"
-                        value={productUnit}
-                        onChange={(e) => setProductUnit(e.target.value)}
-                        placeholder="e.g. Drum (200L), Liters, KG"
-                        className="w-full pr-8 p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-extrabold text-slate-900 focus:border-blue-600 focus:outline-none"
-                      />
-                      <ChevronDown className="w-4 h-4 text-slate-500 font-extrabold absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <datalist id="product_unit_datalist">
-                        <option value="Drum (200L)">Drum (200L)</option>
-                        <option value="Pail (20L)">Pail (20L)</option>
-                        <option value="Gallon (4L)">Gallon (4L)</option>
-                        <option value="Bottle (1L)">Bottle (1L)</option>
-                        <option value="L (Liters)">L (Liters)</option>
-                        <option value="KG (Kilograms)">KG (Kilograms)</option>
-                        <option value="PCS">PCS</option>
-                      </datalist>
-                    </div>
+                    <ComboboxInput
+                      value={productUnit}
+                      onChange={(val) => setProductUnit(val)}
+                      placeholder="e.g. Drum (200L), Liters, KG"
+                      className="p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-extrabold text-slate-900 focus:border-blue-600 focus:outline-none"
+                      options={["Drum (200L)", "Pail (20L)", "Gallon (4L)", "Bottle (1L)", "L (Liters)", "KG (Kilograms)", "PCS"]}
+                    />
                   </div>
 
                   <div>
@@ -473,24 +461,17 @@ export default function RecipesPage() {
                       <div key={idx} className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200">
                         <div className="flex-1">
                           <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Ingredient #{idx + 1} (Type or Pick Raw Material)</label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              list={`ing_rm_datalist_${idx}`}
-                              value={ing.name || ""}
-                              onChange={(e) => handleUpdateIngredient(idx, "name", e.target.value)}
-                              placeholder="Type raw material name..."
-                              className="w-full pr-7 p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
-                            />
-                            <ChevronDown className="w-3.5 h-3.5 text-slate-500 font-extrabold absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-                            <datalist id={`ing_rm_datalist_${idx}`}>
-                              {rawMaterialsList.map((p) => (
-                                <option key={p.sku} value={p.name}>
-                                  {p.name} ({p.sku})
-                                </option>
-                              ))}
-                            </datalist>
-                          </div>
+                          <ComboboxInput
+                            value={ing.name || ""}
+                            onChange={(val) => handleUpdateIngredient(idx, "name", val)}
+                            placeholder="Type raw material name..."
+                            className="p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
+                            options={rawMaterialsList.map((p) => ({
+                              value: p.name,
+                              label: p.name,
+                              sublabel: p.sku
+                            }))}
+                          />
                         </div>
 
                         <div className="w-24">
@@ -507,24 +488,13 @@ export default function RecipesPage() {
 
                         <div className="w-24">
                           <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Unit</label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              list={`ing_uom_datalist_${idx}`}
-                              value={ing.uom}
-                              onChange={(e) => handleUpdateIngredient(idx, "uom", e.target.value)}
-                              placeholder="Liters, KG..."
-                              className="w-full pr-7 p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
-                            />
-                            <ChevronDown className="w-3.5 h-3.5 text-slate-500 font-extrabold absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-                            <datalist id={`ing_uom_datalist_${idx}`}>
-                              <option value="Liters">Liters</option>
-                              <option value="KG">KG</option>
-                              <option value="Grams">Grams</option>
-                              <option value="mL">mL</option>
-                              <option value="PCS">PCS</option>
-                            </datalist>
-                          </div>
+                          <ComboboxInput
+                            value={ing.uom}
+                            onChange={(val) => handleUpdateIngredient(idx, "uom", val)}
+                            placeholder="Liters, KG..."
+                            className="p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
+                            options={["Liters", "KG", "Grams", "mL", "PCS"]}
+                          />
                         </div>
 
                         <button

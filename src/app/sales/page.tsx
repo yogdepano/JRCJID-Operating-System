@@ -8,6 +8,7 @@ import { TopNavbar } from "@/components/Navigation/TopNavbar";
 import { RoleGuard } from "@/components/Auth/RoleGuard";
 import { OrderTaskView } from "@/components/Orders/OrderTaskView";
 import { useUnifiedOrders } from "@/lib/orders/useUnifiedOrders";
+import { ComboboxInput } from "@/components/ui/ComboboxInput";
 
 interface OrderLineItem {
   id: string;
@@ -484,24 +485,17 @@ export default function SalesPage() {
 
                           <div>
                             <label className="text-slate-800 block mb-1 text-xs font-extrabold">Product Item & Variant (Type or Pick Catalog)</label>
-                            <div className="relative">
-                              <input
-                                type="text"
-                                list={`sales_prod_list_${item.id}`}
-                                value={item.product_name || ""}
-                                onChange={(e) => handleUpdateLineItem(item.id, "product_name", e.target.value)}
-                                placeholder="Type product name or select catalog item..."
-                                className="w-full pr-8 p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-bold focus:border-blue-600 focus:outline-none"
-                              />
-                              <ChevronDown className="w-4 h-4 text-slate-500 font-extrabold absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                              <datalist id={`sales_prod_list_${item.id}`}>
-                                {availableProducts.map((p) => (
-                                  <option key={p.sku} value={p.name}>
-                                    {p.name} ({p.sku} — ₱{p.base_price.toFixed(2)} / {p.default_uom})
-                                  </option>
-                                ))}
-                              </datalist>
-                            </div>
+                            <ComboboxInput
+                              value={item.product_name || ""}
+                              onChange={(val) => handleUpdateLineItem(item.id, "product_name", val)}
+                              placeholder="Type product name or select catalog item..."
+                              className="p-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-bold focus:border-blue-600 focus:outline-none"
+                              options={availableProducts.map((p) => ({
+                                value: p.name,
+                                label: p.name,
+                                sublabel: `${p.sku} — ₱${p.base_price.toFixed(2)} / ${p.default_uom}`
+                              }))}
+                            />
                           </div>
 
                           <div className="grid grid-cols-3 gap-2">
@@ -518,24 +512,13 @@ export default function SalesPage() {
                             </div>
                             <div>
                               <label className="text-slate-800 block mb-1 text-xs font-extrabold">Unit (UOM)</label>
-                              <div className="relative">
-                                <input
-                                  type="text"
-                                  list={`sales_uom_list_${item.id}`}
-                                  value={item.uom || ""}
-                                  onChange={(e) => handleUpdateLineItem(item.id, "uom", e.target.value)}
-                                  placeholder="e.g. Liters, Drums, KG"
-                                  className="w-full pr-7 p-2 bg-white border-2 border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
-                                />
-                                <ChevronDown className="w-3.5 h-3.5 text-slate-500 font-extrabold absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                <datalist id={`sales_uom_list_${item.id}`}>
-                                  {UOM_OPTIONS.map((u) => (
-                                    <option key={u} value={u}>
-                                      {u}
-                                    </option>
-                                  ))}
-                                </datalist>
-                              </div>
+                              <ComboboxInput
+                                value={item.uom || ""}
+                                onChange={(val) => handleUpdateLineItem(item.id, "uom", val)}
+                                placeholder="e.g. Liters, Drums, KG"
+                                className="p-2 bg-white border-2 border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
+                                options={UOM_OPTIONS}
+                              />
                             </div>
                             <div>
                               <label className="text-slate-800 block mb-1 text-xs font-extrabold">Item Subtotal (₱)</label>

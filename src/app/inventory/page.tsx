@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
 import { RoleGuard } from "@/components/Auth/RoleGuard";
 import { OrderTaskView } from "@/components/Orders/OrderTaskView";
+import { ComboboxInput } from "@/components/ui/ComboboxInput";
 
 interface InventoryItem {
   id: string;
@@ -472,24 +473,17 @@ export default function InventoryPage() {
               <form onSubmit={handleSaveStockAdjustment} className="space-y-4 text-xs sm:text-sm">
                 <div>
                   <label className="text-slate-800 font-extrabold block mb-1">Product SKU / Item Name (Type or Select Catalog)</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      list="inv_sku_datalist"
-                      value={adjustSku}
-                      onChange={(e) => setAdjustSku(e.target.value)}
-                      placeholder="Type product name/SKU or select catalog..."
-                      className="w-full pr-8 p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-extrabold focus:border-blue-600 focus:outline-none"
-                    />
-                    <ChevronDown className="w-4 h-4 text-slate-500 font-extrabold absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <datalist id="inv_sku_datalist">
-                      {inventoryList.map((p) => (
-                        <option key={p.sku} value={p.sku}>
-                          {p.name} ({p.sku} — Current Stock: {p.current_stock} {p.uom})
-                        </option>
-                      ))}
-                    </datalist>
-                  </div>
+                  <ComboboxInput
+                    value={adjustSku}
+                    onChange={(val) => setAdjustSku(val)}
+                    placeholder="Type product name/SKU or select catalog..."
+                    className="p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-extrabold focus:border-blue-600 focus:outline-none"
+                    options={inventoryList.map((p) => ({
+                      value: p.sku,
+                      label: p.sku,
+                      sublabel: `${p.name} — Current Stock: ${p.current_stock} ${p.uom}`
+                    }))}
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
