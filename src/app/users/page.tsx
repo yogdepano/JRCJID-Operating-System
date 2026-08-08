@@ -47,6 +47,13 @@ export default function UsersPage() {
     try {
       const supabase = createClient();
       
+      // Get deleted user IDs from localStorage to prevent deleted users from popping back up
+      let deletedIds: string[] = [];
+      try {
+        const stored = localStorage.getItem("jrc_deleted_user_ids");
+        if (stored) deletedIds = JSON.parse(stored);
+      } catch (e) {}
+      
       // Fetch Profiles
       const { data: profiles, error: profileErr } = await supabase.from("profiles").select("*");
       
@@ -70,18 +77,20 @@ export default function UsersPage() {
       }
 
       if (profiles && profiles.length > 0) {
-        const loadedUsers: SystemUser[] = profiles.map((p: any) => {
-          const assigned = userRoleAssignments.get(p.id);
-          return {
-            id: p.id,
-            email: p.email,
-            role: (assigned?.code as SystemUser["role"]) || "sales_rep",
-            role_name: assigned?.name || "Sales Representative",
-            full_name: `${p.first_name || "Employee"} ${p.last_name || ""}`.trim(),
-            department: p.department || "General Operations",
-            status: p.is_active ? "ACTIVE" : "INACTIVE",
-          };
-        });
+        const loadedUsers: SystemUser[] = profiles
+          .filter((p: any) => !deletedIds.includes(p.id) && !deletedIds.includes(p.email))
+          .map((p: any) => {
+            const assigned = userRoleAssignments.get(p.id);
+            return {
+              id: p.id,
+              email: p.email,
+              role: (assigned?.code as SystemUser["role"]) || "sales_rep",
+              role_name: assigned?.name || "Sales Representative",
+              full_name: `${p.first_name || "Employee"} ${p.last_name || ""}`.trim(),
+              department: p.department || "General Operations",
+              status: p.is_active ? "ACTIVE" : "INACTIVE",
+            };
+          });
 
         setUsers(loadedUsers);
       } else {
@@ -107,6 +116,16 @@ export default function UsersPage() {
       const names = fullName.trim().split(" ");
       const firstName = names[0] || fullName;
       const lastName = names.slice(1).join(" ") || "Employee";
+
+      // Clear from deleted tracking if re-registering
+      try {
+        const stored = localStorage.getItem("jrc_deleted_user_ids");
+        if (stored) {
+          const list: string[] = JSON.parse(stored);
+          const updated = list.filter((item) => item !== email);
+          localStorage.setItem("jrc_deleted_user_ids", JSON.stringify(updated));
+        }
+      } catch (e) {}
 
       // 1. Create account in Supabase Auth so auth.users record exists with real credentials
       const { data: authData, error: authErr } = await supabase.auth.signUp({
@@ -250,24 +269,27 @@ export default function UsersPage() {
   const handleDeleteUser = async (user: SystemUser) => {
     if (!confirm(`Are you sure you want to remove authorization and delete employee account for ${user.full_name} (${user.email})?`)) return;
     
+    // Save to local deleted tracking so it never pops back up
+    try {
+      const stored = localStorage.getItem("jrc_deleted_user_ids");
+      const list: string[] = stored ? JSON.parse(stored) : [];
+      if (!list.includes(user.id)) list.push(user.id);
+      if (!list.includes(user.email)) list.push(user.email);
+      localStorage.setItem("jrc_deleted_user_ids", JSON.stringify(list));
+    } catch (e) {}
+
     // Optimistically remove from state immediately
-    setUsers((prev) => prev.filter((u) => u.id !== user.id));
+    setUsers((prev) => prev.filter((u) => u.id !== user.id && u.email !== user.email));
 
     try {
       const supabase = createClient();
       
       // 1. Delete user role link
-      const { error: roleErr } = await supabase.from("user_roles").delete().eq("user_id", user.id);
-      if (roleErr) console.warn("User roles delete notice:", roleErr.message);
+      await supabase.from("user_roles").delete().eq("user_id", user.id);
 
-      // 2. Delete profile
-      const { error: profileErr } = await supabase.from("profiles").delete().eq("id", user.id);
-      if (profileErr) {
-        console.warn("Profile delete notice, marking inactive:", profileErr.message);
-        await supabase.from("profiles").update({ is_active: false }).eq("id", user.id);
-      }
-
-      await loadUsers();
+      // 2. Delete profile by id and email
+      await supabase.from("profiles").delete().eq("id", user.id);
+      await supabase.from("profiles").delete().eq("email", user.email);
     } catch (e) {
       console.error("Delete user error:", e);
     }
