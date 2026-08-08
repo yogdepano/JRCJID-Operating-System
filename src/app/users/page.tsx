@@ -37,6 +37,7 @@ export default function UsersPage() {
   // New User Form State
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("JrcOS2026!");
   const [department, setDepartment] = useState("Chemical Manufacturing");
   const [role, setRole] = useState<SystemUser["role"]>("sales_rep");
   const [status, setStatus] = useState<SystemUser["status"]>("ACTIVE");
@@ -107,25 +108,41 @@ export default function UsersPage() {
       const firstName = names[0] || fullName;
       const lastName = names.slice(1).join(" ") || "Employee";
 
-      // Insert profile
-      const { data: newProfile, error: profileErr } = await supabase
-        .from("profiles")
-        .insert({
-          email,
-          first_name: firstName,
-          last_name: lastName,
-          department,
-          is_active: status === "ACTIVE",
-        })
-        .select()
-        .single();
+      // 1. Create account in Supabase Auth so auth.users record exists with real credentials
+      const { data: authData, error: authErr } = await supabase.auth.signUp({
+        email,
+        password: password || "JrcOS2026!",
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            department,
+          },
+        },
+      });
 
-      if (profileErr) {
-        alert(`Notice adding profile: ${profileErr.message}`);
+      let targetUserId = authData?.user?.id;
+
+      // 2. Fallback to direct profiles insert if auth account was already generated or created via admin
+      if (!targetUserId) {
+        const { data: newProfile, error: profileErr } = await supabase
+          .from("profiles")
+          .upsert({
+            email,
+            first_name: firstName,
+            last_name: lastName,
+            department,
+            is_active: status === "ACTIVE",
+          }, { onConflict: "email" })
+          .select()
+          .single();
+
+        if (newProfile?.id) {
+          targetUserId = newProfile.id;
+        }
       }
 
-      // Assign Role in user_roles
-      const targetUserId = newProfile?.id;
+      // 3. Assign Role in user_roles
       if (targetUserId) {
         const { data: roleRec } = await supabase
           .from("roles")
@@ -134,16 +151,19 @@ export default function UsersPage() {
           .single();
 
         if (roleRec?.id) {
-          await supabase.from("user_roles").insert({
+          await supabase.from("user_roles").upsert({
             user_id: targetUserId,
             role_id: roleRec.id,
-          });
+          }, { onConflict: "user_id,role_id" });
         }
       }
+
+      alert(`Employee Account Authorization Created!\n\nEmail: ${email}\nInitial Password: ${password || "JrcOS2026!"}`);
 
       setIsModalOpen(false);
       setFullName("");
       setEmail("");
+      setPassword("JrcOS2026!");
       await loadUsers();
     } catch (err) {
       console.error("Error creating user:", err);
@@ -228,14 +248,28 @@ export default function UsersPage() {
   };
 
   const handleDeleteUser = async (user: SystemUser) => {
-    if (!confirm(`Are you sure you want to remove authorization for ${user.full_name} (${user.email})?`)) return;
+    if (!confirm(`Are you sure you want to remove authorization and delete employee account for ${user.full_name} (${user.email})?`)) return;
+    
+    // Optimistically remove from state immediately
+    setUsers((prev) => prev.filter((u) => u.id !== user.id));
+
     try {
       const supabase = createClient();
-      await supabase.from("user_roles").delete().eq("user_id", user.id);
-      await supabase.from("profiles").delete().eq("id", user.id);
+      
+      // 1. Delete user role link
+      const { error: roleErr } = await supabase.from("user_roles").delete().eq("user_id", user.id);
+      if (roleErr) console.warn("User roles delete notice:", roleErr.message);
+
+      // 2. Delete profile
+      const { error: profileErr } = await supabase.from("profiles").delete().eq("id", user.id);
+      if (profileErr) {
+        console.warn("Profile delete notice, marking inactive:", profileErr.message);
+        await supabase.from("profiles").update({ is_active: false }).eq("id", user.id);
+      }
+
       await loadUsers();
     } catch (e) {
-      console.error("Delete error:", e);
+      console.error("Delete user error:", e);
     }
   };
 
@@ -433,6 +467,19 @@ export default function UsersPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm font-mono text-slate-900 font-semibold focus:border-blue-600"
                   />
+                </div>
+
+                <div>
+                  <label className="text-slate-800 font-extrabold block mb-1">Initial Account Password</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Set account password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm font-mono text-slate-900 font-bold focus:border-blue-600"
+                  />
+                  <p className="text-[11px] text-slate-500 font-medium mt-1">Default temporary password for first sign-in: <strong className="text-slate-700 font-mono">JrcOS2026!</strong></p>
                 </div>
 
                 <div>

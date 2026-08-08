@@ -55,13 +55,46 @@ export default function LoginPage() {
           }, 800);
         }
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (signInError) {
-          setErrorMessage(signInError.message);
+          // If sign in failed with invalid credentials, check if user profile exists to auto-register auth credentials
+          const { data: existingProfile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("email", email)
+            .maybeSingle();
+
+          if (existingProfile) {
+            // Attempt to register Auth credentials for this registered employee profile
+            const { data: autoRegData, error: autoRegError } = await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                data: {
+                  first_name: existingProfile.first_name || "Employee",
+                  last_name: existingProfile.last_name || "User",
+                  department: existingProfile.department || "General",
+                },
+              },
+            });
+
+            if (!autoRegError && autoRegData.user) {
+              setSuccessMessage("Employee account login activated! Redirecting to workspace...");
+              setTimeout(() => {
+                router.push("/");
+                router.refresh();
+              }, 600);
+              return;
+            }
+          }
+
+          setErrorMessage(
+            `${signInError.message}. If your account was added by an Admin, try creating your password via the 'Create Account' tab.`
+          );
         } else {
           router.push("/");
           router.refresh();

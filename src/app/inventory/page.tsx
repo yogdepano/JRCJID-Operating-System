@@ -165,24 +165,38 @@ export default function InventoryPage() {
 
   const totalStockValuation = inventoryList.reduce((acc, item) => acc + item.current_stock * item.unit_cost, 0);
 
-  const handleDeleteInventoryItem = (sku: string) => {
+  const handleDeleteInventoryItem = async (sku: string) => {
     if (!confirm(`Are you sure you want to delete SKU ${sku} from Logistics inventory?`)) return;
     const updated = inventoryList.filter((i) => i.sku !== sku);
     setInventoryList(updated);
     try {
       localStorage.setItem(LOCAL_STORAGE_PRODUCTS_KEY, JSON.stringify(updated));
     } catch (e) {}
+
+    try {
+      const supabase = createClient();
+      await supabase.from("products").delete().eq("sku", sku);
+    } catch (err) {
+      console.error("Inventory item delete notice:", err);
+    }
   };
 
   const [editingMovement, setEditingMovement] = useState<InventoryMovement | null>(null);
 
-  const handleDeleteMovement = (id: string) => {
+  const handleDeleteMovement = async (id: string) => {
     if (!confirm("Are you sure you want to delete this stock movement log entry?")) return;
     const updated = movements.filter((m) => m.id !== id);
     setMovements(updated);
     try {
       localStorage.setItem(LOCAL_STORAGE_MOVEMENTS_KEY, JSON.stringify(updated));
     } catch (e) {}
+
+    try {
+      const supabase = createClient();
+      await supabase.from("inventory_movements").delete().eq("id", id);
+    } catch (err) {
+      console.error("Movement delete notice:", err);
+    }
   };
 
   const handleSaveEditMovement = (e: React.FormEvent) => {

@@ -183,14 +183,23 @@ export default function PestControlPage() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteJob = (jobId: string) => {
+  const handleDeleteJob = async (jobId: string) => {
     if (!confirm("Are you sure you want to cancel and delete this service record?")) return;
+    const targetJob = jobs.find((j) => j.id === jobId);
     const updated = jobs.filter((j) => j.id !== jobId);
     setJobs(updated);
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
     } catch (e) {
       console.error("Delete job error:", e);
+    }
+
+    try {
+      const supabase = createClient();
+      const jobNum = targetJob?.job_number || jobId;
+      await supabase.from("pest_control_jobs").delete().or(`id.eq.${jobId},job_number.eq.${jobNum}`);
+    } catch (err) {
+      console.error("Pest control job delete notice:", err);
     }
   };
 

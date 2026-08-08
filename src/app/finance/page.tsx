@@ -101,13 +101,22 @@ export default function FinancePage() {
   const totalVat = invoices.reduce((acc, inv) => acc + inv.vat_amount, 0);
   const paidCount = invoices.filter((i) => i.status === "PAID").length;
 
-  const handleDeleteInvoice = (id: string) => {
+  const handleDeleteInvoice = async (id: string) => {
     if (!confirm("Are you sure you want to delete this invoice record from Finance?")) return;
+    const targetInv = invoices.find((i) => i.id === id);
     const updated = invoices.filter((i) => i.id !== id);
     setInvoices(updated);
     try {
       localStorage.setItem(LOCAL_STORAGE_SALES_KEY, JSON.stringify(updated));
     } catch (e) {}
+
+    try {
+      const supabase = createClient();
+      const soNum = targetInv?.so_number || id;
+      await supabase.from("sales_orders").delete().or(`id.eq.${id},order_number.eq.${soNum}`);
+    } catch (err) {
+      console.error("Invoice delete notice:", err);
+    }
   };
 
   const handleToggleInvoiceStatus = (id: string) => {

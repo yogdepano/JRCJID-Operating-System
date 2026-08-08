@@ -158,9 +158,13 @@ export default function ProductsPage() {
 
     try {
       const supabase = createClient();
-      await supabase.from("products").delete().eq("sku", sku);
+      const { error: delErr } = await supabase.from("products").delete().eq("sku", sku);
+      if (delErr) {
+        console.warn("Supabase product delete notice:", delErr.message);
+        alert(`Notice: SKU "${sku}" removed locally. (${delErr.message})`);
+      }
     } catch (err) {
-      console.error("Supabase product delete notice:", err);
+      console.error("Supabase product delete error:", err);
     }
   };
 

@@ -259,11 +259,17 @@ ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow authenticated read" ON public.profiles;
 CREATE POLICY "Allow authenticated read" ON public.profiles FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Allow anon read profile" ON public.profiles;
+CREATE POLICY "Allow anon read profile" ON public.profiles FOR SELECT TO anon USING (true);
+
 DROP POLICY IF EXISTS "Allow individual insert profile" ON public.profiles;
 CREATE POLICY "Allow individual insert profile" ON public.profiles FOR INSERT WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow individual update profile" ON public.profiles;
 CREATE POLICY "Allow individual update profile" ON public.profiles FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated delete profile" ON public.profiles;
+CREATE POLICY "Allow authenticated delete profile" ON public.profiles FOR DELETE TO authenticated USING (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read roles" ON public.roles;
 CREATE POLICY "Allow authenticated read roles" ON public.roles FOR SELECT TO authenticated USING (true);
@@ -271,8 +277,14 @@ CREATE POLICY "Allow authenticated read roles" ON public.roles FOR SELECT TO aut
 DROP POLICY IF EXISTS "Allow authenticated read user_roles" ON public.user_roles;
 CREATE POLICY "Allow authenticated read user_roles" ON public.user_roles FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Allow anon read user_roles" ON public.user_roles;
+CREATE POLICY "Allow anon read user_roles" ON public.user_roles FOR SELECT TO anon USING (true);
+
 DROP POLICY IF EXISTS "Allow authenticated insert user_roles" ON public.user_roles;
 CREATE POLICY "Allow authenticated insert user_roles" ON public.user_roles FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow authenticated update user_roles" ON public.user_roles;
+CREATE POLICY "Allow authenticated update user_roles" ON public.user_roles FOR UPDATE TO authenticated USING (true);
 
 DROP POLICY IF EXISTS "Allow authenticated delete user_roles" ON public.user_roles;
 CREATE POLICY "Allow authenticated delete user_roles" ON public.user_roles FOR DELETE TO authenticated USING (true);
@@ -300,12 +312,21 @@ CREATE POLICY "Allow authenticated insert SO" ON public.sales_orders FOR INSERT 
 DROP POLICY IF EXISTS "Allow authenticated update SO" ON public.sales_orders;
 CREATE POLICY "Allow authenticated update SO" ON public.sales_orders FOR UPDATE TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Allow authenticated delete SO" ON public.sales_orders;
+CREATE POLICY "Allow authenticated delete SO" ON public.sales_orders FOR DELETE TO authenticated USING (true);
+
 -- FULL CRUD RLS POLICIES FOR INVENTORY MOVEMENTS
 DROP POLICY IF EXISTS "Allow authenticated read stock" ON public.inventory_movements;
 CREATE POLICY "Allow authenticated read stock" ON public.inventory_movements FOR SELECT TO authenticated USING (true);
 
 DROP POLICY IF EXISTS "Allow authenticated insert stock" ON public.inventory_movements;
 CREATE POLICY "Allow authenticated insert stock" ON public.inventory_movements FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow authenticated update stock" ON public.inventory_movements;
+CREATE POLICY "Allow authenticated update stock" ON public.inventory_movements FOR UPDATE TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated delete stock" ON public.inventory_movements;
+CREATE POLICY "Allow authenticated delete stock" ON public.inventory_movements FOR DELETE TO authenticated USING (true);
 
 -- FULL CRUD RLS POLICIES FOR PEST CONTROL JOBS
 DROP POLICY IF EXISTS "Allow authenticated read PC jobs" ON public.pest_control_jobs;
@@ -314,5 +335,18 @@ CREATE POLICY "Allow authenticated read PC jobs" ON public.pest_control_jobs FOR
 DROP POLICY IF EXISTS "Allow authenticated insert PC jobs" ON public.pest_control_jobs;
 CREATE POLICY "Allow authenticated insert PC jobs" ON public.pest_control_jobs FOR INSERT TO authenticated WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow authenticated update PC jobs" ON public.pest_control_jobs;
+CREATE POLICY "Allow authenticated update PC jobs" ON public.pest_control_jobs FOR UPDATE TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated delete PC jobs" ON public.pest_control_jobs;
+CREATE POLICY "Allow authenticated delete PC jobs" ON public.pest_control_jobs FOR DELETE TO authenticated USING (true);
+
+-- FULL CRUD RLS POLICIES FOR AUDIT LOGS
 DROP POLICY IF EXISTS "Allow authenticated read audit logs" ON public.audit_logs;
 CREATE POLICY "Allow authenticated read audit logs" ON public.audit_logs FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated insert audit logs" ON public.audit_logs;
+CREATE POLICY "Allow authenticated insert audit logs" ON public.audit_logs FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow authenticated delete audit logs" ON public.audit_logs;
+CREATE POLICY "Allow authenticated delete audit logs" ON public.audit_logs FOR DELETE TO authenticated USING (true);
