@@ -137,79 +137,106 @@ export function TopNavbar() {
 
       {/* SLIDE-OUT OVERLAY FOR MOBILE & SECONDARY MODULES */}
       {isDrawerOpen && (
-        <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 p-3 sm:p-4 flex justify-end"
-          onClick={() => setIsDrawerOpen(false)}
-        >
+        <div className="fixed inset-0 z-[100] flex justify-end font-sans">
+          {/* Backdrop */}
           <div
-            className="w-full max-w-sm bg-white border-2 border-blue-600 rounded-2xl p-4 sm:p-5 space-y-4 shadow-2xl mt-14 max-h-[85vh] overflow-y-auto"
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsDrawerOpen(false)}
+          />
+
+          {/* Slide-over Panel */}
+          <div
+            className="relative z-10 w-full max-w-xs sm:max-w-sm bg-white h-full shadow-2xl flex flex-col border-l-4 border-amber-400 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <div>
-                <span className="text-xs font-extrabold text-blue-700 uppercase tracking-wider block">Workspace Navigation</span>
-                <span className="text-[10px] text-slate-500 font-bold block">{roleName} ({email || "Active User"})</span>
+            {/* Drawer Header */}
+            <div className="bg-[#060b17] p-4 text-white flex items-center justify-between border-b-2 border-amber-400 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-700 to-amber-400 p-[2px] shadow-sm">
+                  <div className="w-full h-full bg-blue-900 rounded-[9px] flex items-center justify-center font-extrabold text-amber-400 text-xs">
+                    JRC
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xs font-black tracking-wide text-white uppercase leading-none">Workspace Menu</h3>
+                  <p className="text-[10px] text-amber-400 font-bold mt-0.5">{roleName} ({email || "User"})</p>
+                </div>
               </div>
-              <button onClick={() => setIsDrawerOpen(false)} className="text-slate-400 hover:text-slate-900 font-extrabold text-base p-1">✕</button>
+
+              <button
+                onClick={() => setIsDrawerOpen(false)}
+                className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-extrabold transition-all"
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* MOBILE-ONLY MAIN DEPARTMENTS GRID */}
-            <div className="block md:hidden space-y-2">
-              <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block px-1">Main Departments</span>
-              <div className="grid grid-cols-2 gap-2">
-                {visibleMainNav.map((dept) => {
-                  const Icon = dept.icon;
-                  const isActive = pathname === dept.href;
-                  return (
-                    <button
-                      key={dept.name}
-                      onClick={() => {
-                        router.push(dept.href);
-                        setIsDrawerOpen(false);
-                      }}
-                      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-extrabold transition-all text-left border ${
-                        isActive
-                          ? "bg-blue-700 text-white border-amber-400 shadow-sm"
-                          : "bg-slate-50 text-slate-800 hover:bg-blue-50 hover:text-blue-700 border-slate-200"
-                      }`}
-                    >
-                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-amber-300" : "text-blue-600"}`} />
-                      <span className="truncate">{dept.name}</span>
-                    </button>
-                  );
-                })}
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-slate-50">
+              {/* MOBILE-ONLY MAIN DEPARTMENTS GRID */}
+              <div className="block md:hidden space-y-2">
+                <span className="text-[11px] font-black text-blue-900 uppercase tracking-wider block px-1">Main Departments</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {visibleMainNav.map((dept) => {
+                    const Icon = dept.icon;
+                    const isActive = pathname === dept.href;
+                    return (
+                      <button
+                        key={dept.name}
+                        onClick={() => {
+                          router.push(dept.href);
+                          setIsDrawerOpen(false);
+                        }}
+                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-extrabold transition-all text-left border ${
+                          isActive
+                            ? "bg-blue-700 text-white border-amber-400 shadow-md ring-2 ring-blue-600/30"
+                            : "bg-white text-slate-800 hover:bg-blue-50 hover:text-blue-700 border-slate-200"
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-amber-300" : "text-blue-600"}`} />
+                        <span className="truncate">{dept.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* SECONDARY SYSTEM MODULES */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-black text-blue-900 uppercase tracking-wider block px-1">
+                  <span className="hidden md:inline">Authorized System Modules</span>
+                  <span className="inline md:hidden">System Modules & Vault</span>
+                </span>
+                <div className="space-y-1.5">
+                  {visibleSecondaryNav.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href;
+                    return (
+                      <button
+                        key={item.name}
+                        onClick={() => {
+                          router.push(item.href);
+                          setIsDrawerOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-colors text-left border ${
+                          isActive
+                            ? "bg-blue-50 text-blue-900 border-blue-400 font-black ring-2 ring-blue-200"
+                            : "bg-white text-slate-800 hover:bg-blue-50 hover:text-blue-700 border-slate-200"
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span className="flex-1">{item.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* SECONDARY SYSTEM MODULES */}
-            <div className="space-y-2 pt-1">
-              <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block px-1">
-                <span className="hidden md:inline">Authorized System Modules</span>
-                <span className="inline md:hidden">System Modules & Vault</span>
-              </span>
-              <div className="space-y-1">
-                {visibleSecondaryNav.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.href;
-                  return (
-                    <button
-                      key={item.name}
-                      onClick={() => {
-                        router.push(item.href);
-                        setIsDrawerOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-extrabold transition-colors text-left border ${
-                        isActive
-                          ? "bg-blue-50 text-blue-900 border-blue-300 font-black"
-                          : "text-slate-800 hover:bg-blue-50 hover:text-blue-700 border-slate-100"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 text-blue-600 shrink-0" />
-                      <span>{item.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
+            {/* Drawer Footer */}
+            <div className="p-3 bg-white border-t border-slate-200 text-center shrink-0">
+              <span className="text-[10px] text-slate-500 font-bold">JRC Industrial Sales ERP</span>
             </div>
           </div>
         </div>
