@@ -27,7 +27,8 @@ import {
   Pencil,
   ShieldCheck,
   RefreshCw,
-  ChevronDown
+  ChevronDown,
+  FileText
 } from "lucide-react";
 import Link from "next/link";
 import { ComboboxInput } from "@/components/ui/ComboboxInput";
@@ -61,6 +62,8 @@ const ALL_DEPARTMENT_OPTIONS: Department[] = [
   "Marketing",
 ];
 
+import PrintableSDS from "@/components/documents/PrintableSDS";
+
 export function OrderTaskView({ activeDepartment, employeeName = "Internal Employee" }: OrderTaskViewProps) {
   const { orders, loading, transitionOrder, requestMaterials, requestDepartment, deleteOrder, updateOrder, refreshOrders } = useUnifiedOrders();
   const { role } = useUserRole();
@@ -69,6 +72,9 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
   const [activeTab, setActiveTab] = useState<"waiting" | "in_progress" | "completed">("waiting");
   const [selectedOrderForTimeline, setSelectedOrderForTimeline] = useState<UnifiedOrder | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // SDS Generator Modal State
+  const [sdsModalOrder, setSdsModalOrder] = useState<UnifiedOrder | null>(null);
 
   // Product Catalog Cache for Requisition Dropdown
   const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
@@ -729,6 +735,18 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                         </>
                       )}
 
+                      {/* GENERATE SDS BUTTON (FOR MARKETING & ORDER TRACKING) */}
+                      {(activeDepartment === "Marketing" || activeDepartment === "Sales" || activeDepartment === "Production" || isSuperAdmin) && (
+                        <button
+                          onClick={() => setSdsModalOrder(o)}
+                          className="py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-300 font-extrabold text-xs flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+                          title="Generate GHS Safety Data Sheet on JRC letterhead for this order"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-blue-700" />
+                          <span>Generate SDS</span>
+                        </button>
+                      )}
+
                       {/* FLEXIBLE DEPARTMENT REQUEST BUTTON */}
                       <button
                         onClick={() => {
@@ -1133,6 +1151,20 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* PRINTABLE SDS GENERATOR MODAL */}
+      {sdsModalOrder && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 p-3 sm:p-6 overflow-y-auto flex items-center justify-center">
+          <div className="w-full max-w-5xl my-auto">
+            <PrintableSDS
+              productName={sdsModalOrder.items?.[0]?.product_name || `Order ${sdsModalOrder.order_number} Chemical Formulation`}
+              productSku={sdsModalOrder.items?.[0]?.product_sku || `FG-${sdsModalOrder.order_number}`}
+              category="Industrial / Commercial Chemical Formulation"
+              onClose={() => setSdsModalOrder(null)}
+            />
           </div>
         </div>
       )}

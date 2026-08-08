@@ -32,11 +32,16 @@ interface FormulaIngredientItem {
 const LOCAL_STORAGE_KEY = "jrc_product_catalog_cache_v1";
 const LOCAL_STORAGE_RECIPES_KEY = "jrc_recipes_cache_v1";
 
+import PrintableSDS from "@/components/documents/PrintableSDS";
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   
+  // SDS MODAL STATE FOR MARKETING
+  const [selectedSdsProduct, setSelectedSdsProduct] = useState<Product | null>(null);
+
   // MODAL STATES
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [isSalesProdModalOpen, setIsSalesProdModalOpen] = useState(false);
@@ -526,6 +531,14 @@ export default function ProductsPage() {
                       <td className="py-3.5 px-3">
                         <div className="flex items-center gap-2">
                           <button
+                            onClick={() => setSelectedSdsProduct(p)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 font-black text-xs shadow-xs active:scale-95 transition-all"
+                            title="Generate GHS Safety Data Sheet for this product"
+                          >
+                            <Wand2 className="w-3.5 h-3.5 text-slate-950" />
+                            <span>Generate SDS</span>
+                          </button>
+                          <button
                             onClick={() => handleOpenEditModal(p)}
                             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-extrabold text-xs transition-all"
                           >
@@ -968,6 +981,20 @@ export default function ProductsPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* PRINTABLE SDS MODAL FOR MARKETING */}
+        {selectedSdsProduct && (
+          <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 p-3 sm:p-6 overflow-y-auto flex items-center justify-center">
+            <div className="w-full max-w-5xl my-auto">
+              <PrintableSDS
+                productName={selectedSdsProduct.name}
+                productSku={selectedSdsProduct.sku}
+                category={selectedSdsProduct.category === "finished_chemical" ? "Industrial Chemical Formulation" : "Chemical Raw Material"}
+                onClose={() => setSelectedSdsProduct(null)}
+              />
             </div>
           </div>
         )}

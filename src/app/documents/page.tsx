@@ -32,13 +32,16 @@ interface SalesOrder {
 
 const LOCAL_STORAGE_SALES_KEY = "jrc_sales_orders_cache_v1";
 
+import PrintableSDS from "@/components/documents/PrintableSDS";
+
 function DocumentVaultContent() {
   const searchParams = useSearchParams();
-  const initialType = searchParams.get("type") === "delivery_receipt" ? "delivery_receipt" : "sales_invoice";
+  const rawType = searchParams.get("type");
+  const initialType = rawType === "sds" ? "sds" : rawType === "delivery_receipt" ? "delivery_receipt" : "sales_invoice";
   const targetSoNum = searchParams.get("so") || "";
   const targetInvNum = searchParams.get("inv") || "";
 
-  const [docType, setDocType] = useState<"sales_invoice" | "delivery_receipt">(initialType);
+  const [docType, setDocType] = useState<"sales_invoice" | "delivery_receipt" | "sds">(initialType);
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [selectedSoNum, setSelectedSoNum] = useState<string>(targetSoNum || "");
 
@@ -129,7 +132,7 @@ function DocumentVaultContent() {
     <div className="bg-white p-6 rounded-2xl border-2 border-slate-200 shadow-lg space-y-6">
       {/* DOCUMENT TYPE & ORDER SELECTOR CONTROLS */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-slate-100 pb-4">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setDocType("sales_invoice")}
             className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all ${
@@ -149,6 +152,16 @@ function DocumentVaultContent() {
             }`}
           >
             Delivery Receipt (DR)
+          </button>
+          <button
+            onClick={() => setDocType("sds")}
+            className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all ${
+              docType === "sds"
+                ? "bg-amber-400 text-slate-950 shadow-sm ring-2 ring-blue-700 font-black"
+                : "bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-300"
+            }`}
+          >
+            📄 Safety Data Sheet (GHS-SDS)
           </button>
         </div>
 
@@ -173,16 +186,24 @@ function DocumentVaultContent() {
       </div>
 
       {/* REUSABLE PRINTABLE DOCUMENT */}
-      <PrintableDocument
-        document_type={docType === "sales_invoice" ? "SALES_INVOICE" : "DELIVERY_RECEIPT"}
-        document_number={docNumber}
-        date={activeOrder?.order_date || new Date().toISOString().split("T")[0]}
-        party_name={activeOrder?.customer_name || "Official Commercial Client"}
-        party_address={activeOrder?.delivery_address || "Client Registered Office & Delivery Facility"}
-        payment_terms={activeOrder?.payment_terms || "NET 30 Days"}
-        tin="105-355-027-000 VAT"
-        items={displayItems}
-      />
+      {docType === "sds" ? (
+        <PrintableSDS
+          productName={displayItems[0]?.description || "JRC Heavy-Duty Industrial Chemical Formulation"}
+          productSku={displayItems[0]?.code || activeOrder?.order_number || "FG-CHEM-001"}
+          category="Industrial & Commercial Chemical Solution"
+        />
+      ) : (
+        <PrintableDocument
+          document_type={docType === "sales_invoice" ? "SALES_INVOICE" : "DELIVERY_RECEIPT"}
+          document_number={docNumber}
+          date={activeOrder?.order_date || new Date().toISOString().split("T")[0]}
+          party_name={activeOrder?.customer_name || "Official Commercial Client"}
+          party_address={activeOrder?.delivery_address || "Client Registered Office & Delivery Facility"}
+          payment_terms={activeOrder?.payment_terms || "NET 30 Days"}
+          tin="105-355-027-000 VAT"
+          items={displayItems}
+        />
+      )}
     </div>
   );
 }
