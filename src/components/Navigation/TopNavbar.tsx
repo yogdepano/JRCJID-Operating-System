@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -48,7 +49,12 @@ export function TopNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { role, roleName, email } = useUserRole();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isAllowed = (item: NavItem) => {
     if (!item.allowedRoles) return true;
@@ -60,7 +66,7 @@ export function TopNavbar() {
   const visibleSecondaryNav = secondaryNav.filter(isAllowed);
 
   return (
-    <header className="sticky top-0 left-0 right-0 z-50 shadow-md backdrop-blur-md font-sans">
+    <header className="sticky top-0 left-0 right-0 z-40 shadow-md font-sans">
       {/* TIER 1: TOP CENTER STATUS BAR CONTAINER (MATCHING MOCKUP DESIGN) */}
       <div className="bg-[#060b17] border-b border-amber-400/40 py-1.5 px-3 flex items-center justify-center relative">
         <TopStatusProgress />
@@ -135,9 +141,9 @@ export function TopNavbar() {
         </div>
       </div>
 
-      {/* SLIDE-OUT OVERLAY FOR MOBILE & SECONDARY MODULES */}
-      {isDrawerOpen && (
-        <div className="fixed inset-0 z-[100] flex justify-end font-sans">
+      {/* SLIDE-OUT OVERLAY MOUNTED DIRECTLY ON DOCUMENT.BODY VIA REACT PORTAL */}
+      {mounted && isDrawerOpen && createPortal(
+        <div className="fixed inset-0 z-[99999] flex justify-end font-sans">
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity"
@@ -239,7 +245,8 @@ export function TopNavbar() {
               <span className="text-[10px] text-slate-500 font-bold">JRC Industrial Sales ERP</span>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );
