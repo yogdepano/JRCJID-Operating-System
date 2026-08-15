@@ -23,8 +23,8 @@ interface LiveStats {
 
 export default function ERPHome() {
   const router = useRouter();
-  const { role, roleName } = useUserRole();
-  const [currentUserEmail, setCurrentUserEmail] = useState<string>("Super Admin");
+  const { role, roleName, email } = useUserRole();
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
 
   const [stats, setStats] = useState<LiveStats>({
     totalProducts: 0,
@@ -92,7 +92,7 @@ export default function ERPHome() {
             <div className="pt-2 border-t border-slate-800/80 mt-2 relative z-10">
               <span className="px-2.5 py-1 text-[10px] rounded-full bg-blue-950/80 text-blue-300 border border-blue-800/60 font-extrabold flex items-center gap-1.5 w-fit">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Role:</span> {roleName} ({currentUserEmail})
+                <span>Role:</span> {roleName} {email || currentUserEmail ? `(${currentUserEmail || email})` : ""}
               </span>
             </div>
           </div>

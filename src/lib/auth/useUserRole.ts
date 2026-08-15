@@ -32,66 +32,87 @@ export const ROLE_LABELS: Record<RoleCode, string> = {
   pest_control_tech: "Pest Control Technician",
 };
 
-export function setRoleOverride(newRole: RoleCode) {
+/**
+ * Cleanse legacy override if present to prevent client-side role forgery.
+ */
+export function setRoleOverride(_newRole?: RoleCode) {
   try {
-    localStorage.setItem("jrc_active_role_override", newRole);
-    window.dispatchEvent(new Event("jrc_role_changed"));
+    localStorage.removeItem("jrc_active_role_override");
   } catch (err) {}
 }
 
 export function useUserRole(): UserRoleState {
   const [roleState, setRoleState] = useState<UserRoleState>({
     role: null,
-    roleName: "User",
+    roleName: "Authenticating...",
     email: null,
     userId: null,
     loading: true,
   });
 
   useEffect(() => {
+    // Purge any stored client-side role override on mount
+    try {
+      localStorage.removeItem("jrc_active_role_override");
+    } catch (e) {}
+
     async function fetchRole() {
       try {
-        const override = localStorage.getItem("jrc_active_role_override") as RoleCode | null;
-
         const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: userErr } = await supabase.auth.getUser();
 
-        if (override && ROLE_LABELS[override]) {
+        if (!user || userErr) {
           setRoleState({
-            role: override,
-            roleName: ROLE_LABELS[override],
-            email: user?.email || `${override}@jrcindustrial.ph`,
-            userId: user?.id || null,
-            loading: false,
-          });
-          return;
-        }
-
-        if (!user) {
-          setRoleState({
-            role: "super_admin",
-            roleName: "Super Administrator",
-            email: "admin@jrcindustrial.ph",
+            role: null,
+            roleName: "Guest",
+            email: null,
             userId: null,
             loading: false,
           });
           return;
         }
 
-        // Fetch user role from user_roles table
-        const { data: userRoleRec } = await supabase
+        // Fetch authentic user role from user_roles & roles table
+        const { data: userRoleRec, error: roleErr } = await supabase
           .from("user_roles")
           .select("role_id, roles(code, name)")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
-        let roleCode: RoleCode = "super_admin";
-        let roleName = "Super Administrator";
+        let roleCode: RoleCode | null = null;
+        let roleName = "Standard Employee";
 
         if (userRoleRec && (userRoleRec as any).roles) {
           const roleObj = (userRoleRec as any).roles;
-          roleCode = roleObj.code as RoleCode;
-          roleName = roleObj.name || roleObj.code;
+          const code = roleObj.code as RoleCode;
+          if (ROLE_LABELS[code]) {
+            roleCode = code;
+            roleName = roleObj.name || ROLE_LABELS[code];
+          }
+        }
+
+        // If no explicit user_roles record, check if user profile exists or fallback safely
+        if (!roleCode) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("department")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          if (profile?.department === "Production") {
+            roleCode = "production_lead";
+            roleName = "Production Lead";
+          } else if (profile?.department === "Finance") {
+            roleCode = "finance_manager";
+            roleName = "Finance Manager";
+          } else if (profile?.department === "Pest Control") {
+            roleCode = "pest_control_tech";
+            roleName = "Pest Control Technician";
+          } else {
+            // Safe lowest privilege default
+            roleCode = "sales_rep";
+            roleName = "Sales Representative";
+          }
         }
 
         setRoleState({
@@ -102,10 +123,10 @@ export function useUserRole(): UserRoleState {
           loading: false,
         });
       } catch (err) {
-        console.error("Error fetching user role:", err);
+        console.error("Error fetching authentic user role:", err);
         setRoleState({
-          role: "super_admin",
-          roleName: "Super Administrator",
+          role: null,
+          roleName: "Standard Employee",
           email: null,
           userId: null,
           loading: false,
@@ -114,16 +135,8 @@ export function useUserRole(): UserRoleState {
     }
 
     fetchRole();
-
-    const handleRoleChange = () => {
-      fetchRole();
-    };
-
-    window.addEventListener("jrc_role_changed", handleRoleChange);
-    return () => {
-      window.removeEventListener("jrc_role_changed", handleRoleChange);
-    };
   }, []);
 
   return roleState;
 }
+

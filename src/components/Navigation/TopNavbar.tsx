@@ -19,7 +19,7 @@ import {
   X,
   UserCheck
 } from "lucide-react";
-import { useUserRole, RoleCode, setRoleOverride, ROLE_LABELS } from "@/lib/auth/useUserRole";
+import { useUserRole, RoleCode } from "@/lib/auth/useUserRole";
 import { TopStatusProgress } from "@/components/Navigation/TopStatusProgress";
 
 interface NavItem {
@@ -110,27 +110,19 @@ export function TopNavbar() {
             })}
           </nav>
 
-          {/* USER ROLE SELECTOR DROPDOWN & MOBILE/DESKTOP HAMBURGER TOGGLE */}
+          {/* AUTHENTIC USER ROLE BADGE (READ-ONLY RBAC ENFORCED) & HAMBURGER TOGGLE */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <div className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl bg-blue-50 border border-blue-200 text-xs font-extrabold text-blue-900">
+            <div
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl bg-blue-50 border border-blue-200 text-xs font-extrabold text-blue-900 shadow-2xs"
+              title={`Verified Assigned Role: ${roleName}`}
+            >
               <UserCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-700 shrink-0" />
-              <select
-                value={role || "super_admin"}
-                onChange={(e) => setRoleOverride(e.target.value as RoleCode)}
-                className="bg-transparent font-extrabold text-xs text-blue-900 cursor-pointer focus:outline-none max-w-[100px] sm:max-w-none truncate"
-                title="Switch active role for UI testing"
-              >
-                {(Object.keys(ROLE_LABELS) as RoleCode[]).map((rCode) => (
-                  <option key={rCode} value={rCode}>
-                    {ROLE_LABELS[rCode]}
-                  </option>
-                ))}
-              </select>
+              <span className="truncate max-w-[110px] sm:max-w-none">{roleName}</span>
             </div>
 
             <button
               onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
+              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-sm cursor-pointer"
               aria-label="Toggle navigation drawer"
             >
               {isDrawerOpen ? <X className="w-4 h-4 text-slate-950" /> : <Menu className="w-4 h-4 text-slate-950" />}
