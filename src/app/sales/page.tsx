@@ -25,9 +25,16 @@ interface ProductCatalogItem {
   name: string;
   base_price: number;
   default_uom: string;
+  size_formulas?: Record<string, any>;
 }
 
 const UOM_OPTIONS = [
+  "1 DRUM",
+  "1 PAIL",
+  "1 GALLON",
+  "1 LITER",
+  "1 BOTTLE (1L)",
+  "1 KG",
   "Drum (200L)",
   "Pail (20L)",
   "Gallon (4L)",
@@ -76,7 +83,8 @@ export default function SalesPage() {
           sku: p.sku,
           name: p.name,
           base_price: Number(p.selling_price) || Number(p.unit_cost) || 0,
-          default_uom: p.uom || "PCS",
+          default_uom: p.uom || "1 DRUM",
+          size_formulas: p.size_formulas,
         }));
       }
     } catch (e) {
@@ -91,7 +99,8 @@ export default function SalesPage() {
           sku: p.sku,
           name: p.name,
           base_price: Number(p.selling_price) || Number(p.unit_cost) || 0,
-          default_uom: p.uom || "PCS",
+          default_uom: p.uom || "1 DRUM",
+          size_formulas: p.size_formulas,
         }));
 
         const map = new Map<string, ProductCatalogItem>();
@@ -159,18 +168,28 @@ export default function SalesPage() {
             updated.product_sku = prod.sku;
             updated.product_name = prod.name;
             updated.unit_price = prod.base_price;
-            updated.uom = prod.default_uom || updated.uom || "Liters";
+            updated.uom = prod.default_uom || updated.uom || "1 DRUM";
           } else {
             updated.product_name = value;
             if (!updated.product_sku) updated.product_sku = `CUSTOM-${Date.now().toString().slice(-4)}`;
           }
         }
 
-        if (field === "qty" || field === "unit_price" || field === "product_sku" || field === "product_name") {
-          const qty = field === "qty" ? Number(value) : updated.qty;
-          const price = field === "unit_price" ? Number(value) : updated.unit_price;
-          updated.total_price = qty * price;
+        if (field === "uom") {
+          const prod = availableProducts.find(
+            (p) => p.sku.toLowerCase() === updated.product_sku.toLowerCase() || p.name.toLowerCase() === updated.product_name.toLowerCase()
+          );
+          if (prod && prod.size_formulas && prod.size_formulas[value]) {
+            const sizePrice = Number(prod.size_formulas[value].retail_price);
+            if (sizePrice > 0) {
+              updated.unit_price = sizePrice;
+            }
+          }
         }
+
+        const qty = field === "qty" ? Number(value) : updated.qty;
+        const price = field === "unit_price" ? Number(value) : updated.unit_price;
+        updated.total_price = qty * price;
 
         return updated;
       })
@@ -283,8 +302,11 @@ export default function SalesPage() {
           </div>
 
           <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 border-2 border-amber-500 text-slate-950 font-extrabold text-sm shadow-md shadow-yellow-500/20 active:scale-95 transition-all"
+            onClick={() => {
+              loadProducts();
+              setIsModalOpen(true);
+            }}
+            className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 border-2 border-amber-500 text-slate-950 font-extrabold text-sm shadow-md shadow-yellow-500/20 active:scale-95 transition-all cursor-pointer"
           >
             <Plus className="w-5 h-5 text-slate-950" />
             <span>+ Log New Customer Order</span>
