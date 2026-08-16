@@ -219,6 +219,7 @@ export default function RecipesPage() {
         uom: primaryUom,
         unit_cost: 0,
         selling_price: primaryPrice,
+        size_formulas: formData.size_formulas,
       }, { onConflict: "sku" });
     } catch (err) {}
   };

@@ -85,6 +85,7 @@ export default function ProductsPage() {
           selling_price: Number(p.selling_price) || 0,
           supplier_name: p.supplier_name || "Chemical Vendor",
           supplier_price: Number(p.supplier_price || p.unit_cost) || 0,
+          size_formulas: p.size_formulas || undefined,
         }));
 
         const combinedMap = new Map<string, Product>();
@@ -330,6 +331,7 @@ export default function ProductsPage() {
         selling_price: newProd.selling_price,
         supplier_name: newProd.supplier_name,
         supplier_price: newProd.supplier_price,
+        size_formulas: newProd.size_formulas,
       }, { onConflict: "sku" });
     } catch (err) {
       console.error("Supabase insert error:", err);
