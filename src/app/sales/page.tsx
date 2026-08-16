@@ -62,7 +62,7 @@ export default function SalesPage() {
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [poPhotoUrl, setPoPhotoUrl] = useState<string>("");
   const [paymentTerms, setPaymentTerms] = useState("NET 30 Days");
-  const [preparedBy, setPreparedBy] = useState("Sales Representative");
+  const [preparedBy, setPreparedBy] = useState("Sales");
   const [lineItems, setLineItems] = useState<OrderLineItem[]>([]);
 
   const loadProducts = async () => {
@@ -242,13 +242,13 @@ export default function SalesPage() {
         delivery_address: deliveryAddress,
         po_photo_url: poPhotoUrl,
         payment_terms: paymentTerms,
-        prepared_by: preparedBy || "Sales Representative",
+        prepared_by: preparedBy || "Sales",
         items: lineItems,
         subtotal: subtotal,
         vat_amount: vat,
         grand_total: grandTotal,
       },
-      preparedBy || "Sales Representative"
+      preparedBy || "Sales"
     );
 
     setIsModalOpen(false);

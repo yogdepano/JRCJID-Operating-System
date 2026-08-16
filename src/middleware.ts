@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
     const { data } = await supabase.auth.getUser()
     const user = data?.user
 
-    const isAuthPage = request.nextUrl.pathname.startsWith('/login')
+    const isAuthPage = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/auth')
     const isPublicAsset = request.nextUrl.pathname.startsWith('/_next') || request.nextUrl.pathname.startsWith('/favicon.ico')
 
     if (!user && !isAuthPage && !isPublicAsset) {
@@ -43,7 +43,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    if (user && isAuthPage) {
+    if (user && request.nextUrl.pathname.startsWith('/login')) {
       const url = request.nextUrl.clone()
       url.pathname = '/'
       return NextResponse.redirect(url)

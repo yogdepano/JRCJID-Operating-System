@@ -30,7 +30,7 @@ interface SalesOrder {
   items?: OrderLineItem[];
 }
 
-const LOCAL_STORAGE_SALES_KEY = "jrc_sales_orders_cache_v1";
+const LOCAL_STORAGE_SALES_KEY = "jrc_unified_orders_v5";
 
 import PrintableSDS from "@/components/documents/PrintableSDS";
 
@@ -51,11 +51,21 @@ function DocumentVaultContent() {
 
       // 1. Try local storage cache first
       try {
-        const stored = localStorage.getItem(LOCAL_STORAGE_SALES_KEY);
+        const stored = localStorage.getItem(LOCAL_STORAGE_SALES_KEY) || localStorage.getItem("jrc_sales_orders_cache_v1");
         if (stored) {
-          const parsed: SalesOrder[] = JSON.parse(stored);
+          const parsed: any[] = JSON.parse(stored);
           if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-            loadedOrders = parsed;
+            loadedOrders = parsed.map((o) => ({
+              id: o.id,
+              order_number: o.order_number,
+              customer_name: o.customer_name,
+              client_po_ref: o.client_po_ref,
+              delivery_address: o.delivery_address,
+              order_date: o.po_date || new Date().toISOString().split("T")[0],
+              total_amount: Number(o.grand_total) || Number(o.total_amount) || 0,
+              payment_terms: o.payment_terms || "NET 30 Days",
+              items: o.items || [],
+            }));
           }
         }
       } catch (e) {
@@ -67,25 +77,47 @@ function DocumentVaultContent() {
         const supabase = createClient();
         const { data: dbOrders, error } = await supabase
           .from("sales_orders")
-          .select("*, customers(company_name, shipping_address, payment_terms)")
+          .select("*, customers(company_name, shipping_address, payment_terms), sales_order_items(*, products(sku, name, uom, selling_price))")
           .order("created_at", { ascending: false });
 
         if (!error && dbOrders && dbOrders.length > 0) {
-          const supabaseOrders: SalesOrder[] = dbOrders.map((so: any) => ({
-            id: so.id,
-            order_number: so.order_number || `SO-2026-${so.id.slice(0, 4)}`,
-            customer_name: so.customers?.company_name || "Commercial Client",
-            delivery_address: typeof so.customers?.shipping_address === "string" 
-              ? so.customers.shipping_address 
-              : so.customers?.shipping_address?.street || "Client Main Facility",
-            order_date: so.created_at ? so.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
-            total_amount: Number(so.total_amount) || 0,
-            payment_terms: so.customers?.payment_terms || "NET 30 Days",
-          }));
+          const supabaseOrders: SalesOrder[] = dbOrders.map((so: any) => {
+            const dbItems = so.sales_order_items && so.sales_order_items.length > 0
+              ? so.sales_order_items.map((it: any) => ({
+                  id: it.id,
+                  product_sku: it.products?.sku || it.product_sku || "FG-CHEM-101",
+                  product_name: it.products?.name || it.product_name || "Industrial Chemical Product",
+                  qty: Number(it.quantity) || 1,
+                  uom: it.products?.uom || it.uom || "L",
+                  unit_price: Number(it.unit_price) || 0,
+                  total_price: Number(it.total_price) || 0,
+                }))
+              : [];
+
+            return {
+              id: so.id,
+              order_number: so.order_number || `SO-2026-${so.id.slice(0, 4)}`,
+              customer_name: so.customers?.company_name || "Commercial Client",
+              delivery_address: typeof so.customers?.shipping_address === "string" 
+                ? so.customers.shipping_address 
+                : so.customers?.shipping_address?.street || "Client Main Facility",
+              order_date: so.created_at ? so.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
+              total_amount: Number(so.total_amount) || 0,
+              payment_terms: so.customers?.payment_terms || "NET 30 Days",
+              items: dbItems,
+            };
+          });
 
           const map = new Map<string, SalesOrder>();
           loadedOrders.forEach((o) => map.set(o.order_number, o));
-          supabaseOrders.forEach((o) => map.set(o.order_number, o));
+          supabaseOrders.forEach((o) => {
+            const existing = map.get(o.order_number);
+            if (existing && existing.items && existing.items.length > 0) {
+              map.set(o.order_number, { ...o, items: existing.items });
+            } else {
+              map.set(o.order_number, o);
+            }
+          });
           loadedOrders = Array.from(map.values());
         }
       } catch (err) {

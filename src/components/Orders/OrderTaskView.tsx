@@ -134,13 +134,19 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
 
     if (isCompletedOrCancelled) return false;
 
+    if (activeDepartment === "Admin") {
+      if (activeTab === "waiting") {
+        return true; // All active non-completed orders
+      } else {
+        // Orders actively in workflow (in production, transit, or finance)
+        return o.current_status !== "Waiting for Sales" && o.current_status !== "Completed" && o.current_status !== "Cancelled";
+      }
+    }
+
     const deptResp = (o.current_department_responsible || "Sales").toLowerCase();
     const targetDept = activeDepartment.toLowerCase();
 
-    const isMyResponsibility =
-      activeDepartment === "Admin"
-        ? true
-        : deptResp === targetDept;
+    const isMyResponsibility = deptResp === targetDept;
 
     if (activeTab === "waiting") {
       return isMyResponsibility;
@@ -157,14 +163,13 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
       (activeDepartment === "Admin" || (o.current_department_responsible || "Sales").toLowerCase() === activeDepartment.toLowerCase())
   ).length;
 
-  const inProgressCount = orders.filter(
-    (o) =>
-      o &&
-      o.current_status !== "Completed" &&
-      o.current_status !== "Cancelled" &&
-      activeDepartment !== "Admin" &&
-      (o.current_department_responsible || "Sales").toLowerCase() !== activeDepartment.toLowerCase()
-  ).length;
+  const inProgressCount = orders.filter((o) => {
+    if (!o || o.current_status === "Completed" || o.current_status === "Cancelled") return false;
+    if (activeDepartment === "Admin") {
+      return o.current_status !== "Waiting for Sales";
+    }
+    return (o.current_department_responsible || "Sales").toLowerCase() !== activeDepartment.toLowerCase();
+  }).length;
 
   const completedCount = orders.filter(
     (o) => o && (o.current_status === "Completed" || o.current_status === "Cancelled")
@@ -323,7 +328,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                 : "text-slate-700 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            <span>📫 Orders Waiting for Me</span>
+            <span>{activeDepartment === "Admin" ? "📋 All Pending Orders" : `📫 Orders Waiting on ${activeDepartment}`}</span>
             <span className={`px-1.5 py-0.2 rounded-full text-[11px] font-mono font-bold ${activeTab === "waiting" ? "bg-amber-400 text-slate-950" : "bg-slate-200 text-slate-800"}`}>
               {waitingCount}
             </span>
@@ -337,7 +342,7 @@ export function OrderTaskView({ activeDepartment, employeeName = "Internal Emplo
                 : "text-slate-700 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            <span>⏳ Orders In Progress</span>
+            <span>{activeDepartment === "Admin" ? "⏳ In Workflow / Production" : "⏳ In Progress Across Depts"}</span>
             <span className={`px-1.5 py-0.2 rounded-full text-[11px] font-mono font-bold ${activeTab === "in_progress" ? "bg-amber-400 text-slate-950" : "bg-slate-200 text-slate-800"}`}>
               {inProgressCount}
             </span>

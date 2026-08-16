@@ -21,7 +21,12 @@ interface InvoiceRecord {
   status: "UNPAID" | "PARTIALLY_PAID" | "PAID" | "OVERDUE";
 }
 
-const LOCAL_STORAGE_SALES_KEY = "jrc_sales_orders_cache_v1";
+const LOCAL_STORAGE_SALES_KEY = "jrc_unified_orders_v5";
+
+const isUUID = (str?: string): boolean => {
+  if (!str) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+};
 
 export default function FinancePage() {
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
@@ -34,23 +39,24 @@ export default function FinancePage() {
     let invoiceList: InvoiceRecord[] = [];
 
     try {
-      const cachedSales = localStorage.getItem(LOCAL_STORAGE_SALES_KEY);
+      const cachedSales = localStorage.getItem(LOCAL_STORAGE_SALES_KEY) || localStorage.getItem("jrc_sales_orders_cache_v1");
       if (cachedSales) {
         const parsed = JSON.parse(cachedSales);
         invoiceList = parsed.map((so: any, idx: number) => {
-          const sub = Number(so.total_amount) / 1.12 || 10000;
-          const vat = Number(so.total_amount) - sub;
+          const grand = Number(so.grand_total) || Number(so.total_amount) || 0;
+          const sub = Number(so.subtotal) || grand / 1.12;
+          const vat = Number(so.vat_amount) || grand - sub;
           return {
             id: so.id || `inv-${idx}`,
             invoice_number: `SI-2026-${Math.floor(1000 + idx * 17)}`,
             so_number: so.order_number || `SO-2026-${1000 + idx}`,
             customer_name: so.customer_name || "Commercial Client",
-            due_date: "2026-08-30",
+            due_date: so.po_date ? new Date(new Date(so.po_date).getTime() + 30 * 86400000).toISOString().split("T")[0] : "2026-08-30",
             subtotal: sub,
             vat_amount: vat,
-            grand_total: Number(so.total_amount) || 11200,
+            grand_total: grand,
             payment_terms: so.payment_terms || "NET 30 Days",
-            status: so.payment_status || "UNPAID",
+            status: so.payment_status || (so.payment_terms?.startsWith("Cash") ? "PAID" : "UNPAID"),
           };
         });
       }
@@ -60,22 +66,22 @@ export default function FinancePage() {
 
     try {
       const supabase = createClient();
-      const { data } = await supabase.from("sales_orders").select("*");
+      const { data } = await supabase.from("sales_orders").select("*, customers(company_name, payment_terms)");
       if (data && data.length > 0) {
         const remoteInvoices: InvoiceRecord[] = data.map((so: any, idx: number) => {
-          const total = Number(so.total_amount) || 15000;
+          const total = Number(so.total_amount) || 0;
           const sub = total / 1.12;
           const vat = total - sub;
           return {
             id: so.id,
             invoice_number: `SI-2026-00${idx + 1}`,
             so_number: so.order_number,
-            customer_name: so.customer_name || "Commercial Account",
-            due_date: "2026-08-30",
+            customer_name: so.customers?.company_name || so.customer_name || "Commercial Account",
+            due_date: so.created_at ? new Date(new Date(so.created_at).getTime() + 30 * 86400000).toISOString().split("T")[0] : "2026-08-30",
             subtotal: sub,
             vat_amount: vat,
             grand_total: total,
-            payment_terms: so.payment_terms || "NET 30 Days",
+            payment_terms: so.customers?.payment_terms || so.payment_terms || "NET 30 Days",
             status: so.payment_status || "UNPAID",
           };
         });
@@ -106,31 +112,46 @@ export default function FinancePage() {
     const targetInv = invoices.find((i) => i.id === id);
     const updated = invoices.filter((i) => i.id !== id);
     setInvoices(updated);
-    try {
-      localStorage.setItem(LOCAL_STORAGE_SALES_KEY, JSON.stringify(updated));
-    } catch (e) {}
 
     try {
       const supabase = createClient();
       const soNum = targetInv?.so_number || id;
-      await supabase.from("sales_orders").delete().or(`id.eq.${id},order_number.eq.${soNum}`);
+      const deleteQuery = supabase.from("sales_orders").delete();
+      if (isUUID(id)) {
+        await deleteQuery.or(`id.eq.${id},order_number.eq.${soNum}`);
+      } else {
+        await deleteQuery.eq("order_number", soNum);
+      }
     } catch (err) {
       console.error("Invoice delete notice:", err);
     }
   };
 
-  const handleToggleInvoiceStatus = (id: string) => {
+  const handleToggleInvoiceStatus = async (id: string) => {
     const cycle: Record<InvoiceRecord["status"], InvoiceRecord["status"]> = {
       UNPAID: "PAID",
       PAID: "OVERDUE",
       OVERDUE: "UNPAID",
       PARTIALLY_PAID: "PAID",
     };
-    const updated = invoices.map((inv) => (inv.id === id ? { ...inv, status: cycle[inv.status] } : inv));
+    const targetInv = invoices.find((i) => i.id === id);
+    if (!targetInv) return;
+    const newStatus = cycle[targetInv.status];
+
+    const updated = invoices.map((inv) => (inv.id === id ? { ...inv, status: newStatus } : inv));
     setInvoices(updated);
+
     try {
-      localStorage.setItem(LOCAL_STORAGE_SALES_KEY, JSON.stringify(updated));
-    } catch (e) {}
+      const supabase = createClient();
+      const updateQuery = supabase.from("sales_orders").update({ payment_status: newStatus });
+      if (isUUID(id)) {
+        await updateQuery.or(`id.eq.${id},order_number.eq.${targetInv.so_number}`);
+      } else {
+        await updateQuery.eq("order_number", targetInv.so_number);
+      }
+    } catch (e) {
+      console.error("Status toggle error:", e);
+    }
   };
 
   const filteredInvoices = invoices.filter((inv) => {
@@ -140,7 +161,7 @@ export default function FinancePage() {
   });
 
   return (
-    <RoleGuard allowedRoles={["super_admin", "finance_manager"]} moduleName="Finance & Accounts Receivable">
+    <RoleGuard allowedRoles={["super_admin", "finance_manager"]} moduleName="Finance">
       <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />
@@ -168,7 +189,7 @@ export default function FinancePage() {
         </div>
 
         {/* TASK-ORIENTED SYNCHRONIZED ORDER WORKSPACE FOR FINANCE */}
-        <OrderTaskView activeDepartment="Finance" employeeName="Finance Manager" />
+        <OrderTaskView activeDepartment="Finance" employeeName="Finance" />
 
         {/* FINANCIAL SUMMARY CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">

@@ -32,17 +32,23 @@ const TREATMENT_TYPES = [
   "Industrial Chemical Disinfection",
 ];
 
+const isUUID = (str?: string): boolean => {
+  if (!str) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+};
+
 export default function PestControlPage() {
   const [jobs, setJobs] = useState<ServiceJob[]>(INITIAL_JOBS);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
 
   // Form State
   const [clientName, setClientName] = useState("");
   const [serviceAddress, setServiceAddress] = useState("");
   const [targetPest, setTargetPest] = useState(TREATMENT_TYPES[0]);
-  const [technician, setTechnician] = useState("Ramon M. (Lead Tech)");
+  const [technician, setTechnician] = useState("Ramon M.");
   const [serviceDate, setServiceDate] = useState("2026-08-05");
   const [notes, setNotes] = useState("");
 
@@ -62,17 +68,26 @@ export default function PestControlPage() {
       const supabase = createClient();
       const { data, error } = await supabase.from("pest_control_jobs").select("*");
       if (!error && data && data.length > 0) {
-        const remoteJobs: ServiceJob[] = data.map((j: any) => ({
-          id: j.id,
-          job_number: j.job_number || `PC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-          client_name: j.client_name || "Commercial Client",
-          service_address: j.service_address || "",
-          target_pest: j.notes ? j.notes.split(" — ")[0] || "General Pest Treatment" : "General Pest Control",
-          technician: "Ramon M. (Lead Tech)",
-          service_date: j.scheduled_date ? j.scheduled_date.split("T")[0] : "2026-08-05",
-          notes: j.notes || "",
-          status: j.status || "SCHEDULED",
-        }));
+        const remoteJobs: ServiceJob[] = data.map((j: any) => {
+          const matchedLocal = localJobs.find((lj) => lj.job_number === j.job_number || lj.id === j.id);
+          const parsedNotes = j.notes || "";
+          let derivedClient = matchedLocal?.client_name || "Commercial Client";
+          if (parsedNotes.includes(" | ")) {
+            derivedClient = parsedNotes.split(" | ")[0];
+          }
+
+          return {
+            id: j.id,
+            job_number: j.job_number || `PC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+            client_name: derivedClient,
+            service_address: j.service_address || matchedLocal?.service_address || "",
+            target_pest: matchedLocal?.target_pest || (parsedNotes.includes(" — ") ? parsedNotes.split(" — ")[0] : "General Pest Treatment"),
+            technician: matchedLocal?.technician || "Ramon M.",
+            service_date: j.scheduled_date ? j.scheduled_date.split("T")[0] : "2026-08-05",
+            notes: parsedNotes,
+            status: j.status || "SCHEDULED",
+          };
+        });
 
         const map = new Map<string, ServiceJob>();
         localJobs.forEach((item) => map.set(item.job_number, item));
@@ -94,6 +109,7 @@ export default function PestControlPage() {
     e.preventDefault();
 
     if (editingJobId) {
+      const targetJob = jobs.find((j) => j.id === editingJobId);
       const updated = jobs.map((j) =>
         j.id === editingJobId
           ? {
@@ -111,6 +127,22 @@ export default function PestControlPage() {
       try {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
       } catch (e) {}
+
+      try {
+        const supabase = createClient();
+        const jobNum = targetJob?.job_number || editingJobId;
+        const updateQuery = supabase.from("pest_control_jobs").update({
+          service_address: serviceAddress || clientName,
+          scheduled_date: new Date(serviceDate).toISOString(),
+          notes: `${clientName} | ${targetPest} — ${notes}`,
+        });
+
+        if (isUUID(editingJobId)) {
+          await updateQuery.or(`id.eq.${editingJobId},job_number.eq.${jobNum}`);
+        } else {
+          await updateQuery.eq("job_number", jobNum);
+        }
+      } catch (err) {}
       setEditingJobId(null);
     } else {
       const newJobNo = `PC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -142,7 +174,7 @@ export default function PestControlPage() {
           service_address: serviceAddress || clientName,
           scheduled_date: new Date(serviceDate).toISOString(),
           status: "SCHEDULED",
-          notes: `${targetPest} — ${notes}`,
+          notes: `${clientName} | ${targetPest} — ${notes}`,
         });
       } catch (err) {}
     }
@@ -153,7 +185,7 @@ export default function PestControlPage() {
     setNotes("");
   };
 
-  const handleToggleStatus = (jobId: string) => {
+  const handleToggleStatus = async (jobId: string) => {
     const statusCycle: Record<ServiceJob["status"], ServiceJob["status"]> = {
       SCHEDULED: "IN_PROGRESS",
       IN_PROGRESS: "COMPLETED",
@@ -161,16 +193,29 @@ export default function PestControlPage() {
       CANCELLED: "SCHEDULED",
     };
 
-    const updated = jobs.map((j) => (j.id === jobId ? { ...j, status: statusCycle[j.status] } : j));
+    const targetJob = jobs.find((j) => j.id === jobId);
+    if (!targetJob) return;
+    const nextStatus = statusCycle[targetJob.status];
+
+    const updated = jobs.map((j) => (j.id === jobId ? { ...j, status: nextStatus } : j));
     setJobs(updated);
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
     } catch (e) {
       console.error("Status update error:", e);
     }
-  };
 
-  const [editingJobId, setEditingJobId] = useState<string | null>(null);
+    try {
+      const supabase = createClient();
+      const jobNum = targetJob.job_number;
+      const updateQuery = supabase.from("pest_control_jobs").update({ status: nextStatus });
+      if (isUUID(jobId)) {
+        await updateQuery.or(`id.eq.${jobId},job_number.eq.${jobNum}`);
+      } else {
+        await updateQuery.eq("job_number", jobNum);
+      }
+    } catch (err) {}
+  };
 
   const handleOpenEditJob = (j: ServiceJob) => {
     setEditingJobId(j.id);
@@ -197,7 +242,12 @@ export default function PestControlPage() {
     try {
       const supabase = createClient();
       const jobNum = targetJob?.job_number || jobId;
-      await supabase.from("pest_control_jobs").delete().or(`id.eq.${jobId},job_number.eq.${jobNum}`);
+      const deleteQuery = supabase.from("pest_control_jobs").delete();
+      if (isUUID(jobId)) {
+        await deleteQuery.or(`id.eq.${jobId},job_number.eq.${jobNum}`);
+      } else {
+        await deleteQuery.eq("job_number", jobNum);
+      }
     } catch (err) {
       console.error("Pest control job delete notice:", err);
     }

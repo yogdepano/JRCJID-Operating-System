@@ -33,8 +33,13 @@ interface InventoryMovement {
   user: string;
 }
 
-const LOCAL_STORAGE_PRODUCTS_KEY = "jrc_products_cache_v1";
+const LOCAL_STORAGE_PRODUCTS_KEY = "jrc_product_catalog_cache_v1";
 const LOCAL_STORAGE_MOVEMENTS_KEY = "jrc_inventory_movements_cache_v1";
+
+const isUUID = (str?: string): boolean => {
+  if (!str) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+};
 
 export default function InventoryPage() {
   const [inventoryList, setInventoryList] = useState<InventoryItem[]>([]);
@@ -53,7 +58,7 @@ export default function InventoryPage() {
     let prods: InventoryItem[] = [];
 
     try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY);
+      const stored = localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY) || localStorage.getItem("jrc_products_cache_v1");
       if (stored) {
         const parsed = JSON.parse(stored);
         prods = parsed.map((p: any) => ({
@@ -111,7 +116,7 @@ export default function InventoryPage() {
     loadData();
   }, []);
 
-  const handleSaveStockAdjustment = (e: React.FormEvent) => {
+  const handleSaveStockAdjustment = async (e: React.FormEvent) => {
     e.preventDefault();
     const targetProd = inventoryList.find((p) => p.sku === adjustSku);
     if (!targetProd) return;
@@ -136,7 +141,7 @@ export default function InventoryPage() {
       ref_doc: adjustRefDoc || "MANUAL-ADJUSTMENT",
       qty_delta: adjustQty,
       uom: targetProd.uom,
-      user: "Logistics Officer",
+      user: "Logistics",
     };
 
     const updatedMovements = [newMovement, ...movements];
@@ -146,6 +151,22 @@ export default function InventoryPage() {
     } catch (err) {
       console.error("Movements local storage error:", err);
     }
+
+    // Persist movement to Supabase if target product has a database UUID
+    try {
+      if (isUUID(targetProd.id)) {
+        const supabase = createClient();
+        await supabase.from("inventory_movements").insert({
+          product_id: targetProd.id,
+          location: "Main Warehouse",
+          movement_type: adjustReason === "PURCHASE_RECEIPT" ? "PURCHASE_RECEIPT" : "ADJUSTMENT",
+          quantity: adjustQty,
+          batch_number: newMovement.batch_lot,
+          reference_type: "MANUAL",
+          reference_id: targetProd.id,
+        });
+      }
+    } catch (err) {}
 
     setIsAdjustModalOpen(false);
     setAdjustQty(0);
@@ -192,8 +213,10 @@ export default function InventoryPage() {
     } catch (e) {}
 
     try {
-      const supabase = createClient();
-      await supabase.from("inventory_movements").delete().eq("id", id);
+      if (isUUID(id)) {
+        const supabase = createClient();
+        await supabase.from("inventory_movements").delete().eq("id", id);
+      }
     } catch (err) {
       console.error("Movement delete notice:", err);
     }

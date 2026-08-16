@@ -84,7 +84,6 @@ export function ComboboxInput({
         ref={inputRef}
         id={id}
         type="text"
-        list={datalistId}
         value={value}
         disabled={disabled}
         required={required}
@@ -107,15 +106,6 @@ export function ComboboxInput({
       >
         <ChevronDown className={`w-4 h-4 text-slate-600 font-extrabold stroke-[2.5] transition-transform duration-200 ${isOpen ? "rotate-180 text-blue-700" : ""}`} />
       </button>
-
-      {/* NATIVE DATALIST FALLBACK FOR BROWSER AUTO-FILL */}
-      <datalist id={datalistId}>
-        {formattedOptions.map((opt, idx) => (
-          <option key={idx} value={opt.value}>
-            {opt.label || opt.value} {opt.sublabel ? `— ${opt.sublabel}` : ""}
-          </option>
-        ))}
-      </datalist>
 
       {/* INTERACTIVE CUSTOM DROPDOWN OVERLAY */}
       {isOpen && filteredOptions.length > 0 && (

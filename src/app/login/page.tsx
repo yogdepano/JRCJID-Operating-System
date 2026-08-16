@@ -289,7 +289,7 @@ export default function LoginPage() {
                   onClick={() => handleDemoFill("production@jrcindustrial.ph")}
                   className="p-2.5 rounded-xl bg-[#131c35] border border-[#1c2541] hover:border-amber-400 text-left text-slate-200 hover:text-amber-400 transition-colors"
                 >
-                  <span className="font-bold block">Production Manager</span>
+                  <span className="font-bold block">Production</span>
                   <span className="text-slate-400 text-[10px]">Chemical BoM</span>
                 </button>
                 <button
@@ -297,7 +297,7 @@ export default function LoginPage() {
                   onClick={() => handleDemoFill("sales@jrcindustrial.ph")}
                   className="p-2.5 rounded-xl bg-[#131c35] border border-[#1c2541] hover:border-amber-400 text-left text-slate-200 hover:text-amber-400 transition-colors"
                 >
-                  <span className="font-bold block">Sales Rep</span>
+                  <span className="font-bold block">Sales</span>
                   <span className="text-slate-400 text-[10px]">SO & Customers</span>
                 </button>
                 <button
@@ -305,7 +305,7 @@ export default function LoginPage() {
                   onClick={() => handleDemoFill("tech@jrcindustrial.ph")}
                   className="p-2.5 rounded-xl bg-[#131c35] border border-[#1c2541] hover:border-amber-400 text-left text-slate-200 hover:text-amber-400 transition-colors"
                 >
-                  <span className="font-bold block">Pest Control Tech</span>
+                  <span className="font-bold block">Pest Control</span>
                   <span className="text-slate-400 text-[10px]">Field jobs</span>
                 </button>
               </div>

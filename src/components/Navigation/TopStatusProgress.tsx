@@ -12,9 +12,9 @@ interface SystemMetrics {
 
 export function TopStatusProgress() {
   const [metrics, setMetrics] = useState<SystemMetrics>({
-    settledOrders: 8,
-    inProgressOrders: 3,
-    attentionRequired: 1,
+    settledOrders: 0,
+    inProgressOrders: 0,
+    attentionRequired: 0,
   });
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,15 +34,20 @@ export function TopStatusProgress() {
         .select("*", { count: "exact", head: true })
         .in("status", ["IN_PRODUCTION", "APPROVED", "PENDING_APPROVAL"]);
 
-      const { count: lowStockCount } = await supabase
+      // Count products where current_stock is at or below reorder level (if products exist)
+      const { data: prods } = await supabase
         .from("products")
-        .select("*", { count: "exact", head: true })
-        .lte("min_reorder_level", 10);
+        .select("current_stock, min_reorder_level");
+
+      let lowStock = 0;
+      if (prods && prods.length > 0) {
+        lowStock = prods.filter((p: any) => (Number(p.current_stock) || 0) <= (Number(p.min_reorder_level) || 0) && (Number(p.min_reorder_level) || 0) > 0).length;
+      }
 
       setMetrics({
-        settledOrders: settledCount || 8,
-        inProgressOrders: activeCount || 3,
-        attentionRequired: lowStockCount || 1,
+        settledOrders: settledCount ?? 0,
+        inProgressOrders: activeCount ?? 0,
+        attentionRequired: lowStock,
       });
     } catch (err) {
       console.error("Notice loading status progress:", err);

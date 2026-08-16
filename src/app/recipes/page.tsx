@@ -33,6 +33,7 @@ export default function RecipesPage() {
   const [selectedRecipe, setSelectedRecipe] = useState<BoMRecipe | null>(null);
   const [targetBatchQty, setTargetBatchQty] = useState<number>(1000);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
   const [availableProducts, setAvailableProducts] = useState<any[]>([]);
 
   // FORM STATE FOR NEW FINISHED PRODUCT & EMBEDDED FORMULA
@@ -47,7 +48,7 @@ export default function RecipesPage() {
   const loadData = async () => {
     let prods: any[] = [];
     try {
-      const storedProds = localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY);
+      const storedProds = localStorage.getItem("jrc_product_catalog_cache_v1") || localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY);
       if (storedProds) {
         prods = JSON.parse(storedProds);
       }
@@ -137,36 +138,53 @@ export default function RecipesPage() {
     const finalSku = productSku || generateSku(productName, productVariant) || `FG-${Date.now()}`;
     const fullName = productVariant && productVariant !== "Standard" ? `${productName} (${productVariant})` : productName;
 
-    const newRec: BoMRecipe = {
-      id: `bom-${Date.now()}`,
-      finished_product_sku: finalSku,
-      finished_product_name: fullName,
-      batch_yield_qty: 1,
-      batch_yield_uom: productUnit,
-      version: "v1.0",
-      ingredients: formIngredients,
-    };
+    let updatedRecipes: BoMRecipe[] = [];
+    let savedRecipe: BoMRecipe;
 
-    const updatedRecipes = [newRec, ...recipes];
+    if (editingRecipeId) {
+      savedRecipe = {
+        id: editingRecipeId,
+        finished_product_sku: finalSku,
+        finished_product_name: fullName,
+        batch_yield_qty: 1,
+        batch_yield_uom: productUnit,
+        version: "v1.0",
+        ingredients: formIngredients,
+      };
+      updatedRecipes = recipes.map((r) => (r.id === editingRecipeId ? savedRecipe : r));
+      setEditingRecipeId(null);
+    } else {
+      savedRecipe = {
+        id: `bom-${Date.now()}`,
+        finished_product_sku: finalSku,
+        finished_product_name: fullName,
+        batch_yield_qty: 1,
+        batch_yield_uom: productUnit,
+        version: "v1.0",
+        ingredients: formIngredients,
+      };
+      updatedRecipes = [savedRecipe, ...recipes];
+    }
+
     setRecipes(updatedRecipes);
-    setSelectedRecipe(newRec);
+    setSelectedRecipe(savedRecipe);
     setTargetBatchQty(100);
 
     try {
       localStorage.setItem(LOCAL_STORAGE_RECIPES_KEY, JSON.stringify(updatedRecipes));
     } catch (err) {}
 
-    // Save product to database
+    // Upsert product in database
     try {
       const supabase = createClient();
-      await supabase.from("products").insert({
+      await supabase.from("products").upsert({
         sku: finalSku,
         name: fullName,
         category: "finished_chemical",
         uom: productUnit,
         unit_cost: 0,
         selling_price: sellingPrice,
-      });
+      }, { onConflict: "sku" });
     } catch (err) {}
 
     setIsModalOpen(false);
@@ -192,6 +210,7 @@ export default function RecipesPage() {
 
   const handleEditRecipe = (r: BoMRecipe, e: React.MouseEvent) => {
     e.stopPropagation();
+    setEditingRecipeId(r.id);
     setProductName(r.finished_product_name);
     setProductSku(r.finished_product_sku);
     setProductUnit(r.batch_yield_uom);
@@ -202,7 +221,7 @@ export default function RecipesPage() {
   const scalingMultiplier = selectedRecipe ? targetBatchQty / (selectedRecipe.batch_yield_qty || 1) : 1;
 
   return (
-    <RoleGuard allowedRoles={["super_admin", "production_manager", "production_lead"]} moduleName="Chemical BoM & Production Recipes">
+    <RoleGuard allowedRoles={["super_admin", "production_manager", "production_lead"]} moduleName="Production & Chemical BoM">
       <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* STICKY TOP NAVIGATION BAR */}
       <TopNavbar />

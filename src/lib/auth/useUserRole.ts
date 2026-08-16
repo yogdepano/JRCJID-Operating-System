@@ -21,15 +21,20 @@ export interface UserRoleState {
   loading: boolean;
 }
 
-export const ROLE_LABELS: Record<RoleCode, string> = {
-  super_admin: "Super Administrator",
-  sales_rep: "Sales Representative",
-  finance_manager: "Finance Manager",
-  production_manager: "Production Manager",
-  production_lead: "Production Lead",
-  purchasing_officer: "Purchasing Officer",
-  logistics_driver: "Logistics Driver",
-  pest_control_tech: "Pest Control Technician",
+export const ROLE_LABELS: Record<string, string> = {
+  super_admin: "Super Admin",
+  sales_rep: "Sales",
+  sales: "Sales",
+  finance_manager: "Finance",
+  finance: "Finance",
+  production_manager: "Production",
+  production_lead: "Production",
+  production: "Production",
+  purchasing_officer: "Logistics",
+  logistics_driver: "Logistics",
+  logistics: "Logistics",
+  pest_control_tech: "Pest Control",
+  pest_control: "Pest Control",
 };
 
 /**
@@ -80,14 +85,17 @@ export function useUserRole(): UserRoleState {
           .maybeSingle();
 
         let roleCode: RoleCode | null = null;
-        let roleName = "Standard Employee";
+        let roleName = "General";
 
         if (userRoleRec && (userRoleRec as any).roles) {
           const roleObj = (userRoleRec as any).roles;
           const code = roleObj.code as RoleCode;
           if (ROLE_LABELS[code]) {
             roleCode = code;
-            roleName = roleObj.name || ROLE_LABELS[code];
+            roleName = ROLE_LABELS[code];
+          } else {
+            roleCode = code;
+            roleName = roleObj.name || code;
           }
         }
 
@@ -99,19 +107,26 @@ export function useUserRole(): UserRoleState {
             .eq("id", user.id)
             .maybeSingle();
 
-          if (profile?.department === "Production") {
-            roleCode = "production_lead";
-            roleName = "Production Lead";
-          } else if (profile?.department === "Finance") {
+          const dept = (profile?.department || "").toLowerCase();
+          if (dept.includes("production")) {
+            roleCode = "production_manager";
+            roleName = "Production";
+          } else if (dept.includes("finance") || dept.includes("accounting")) {
             roleCode = "finance_manager";
-            roleName = "Finance Manager";
-          } else if (profile?.department === "Pest Control") {
+            roleName = "Finance";
+          } else if (dept.includes("pest")) {
             roleCode = "pest_control_tech";
-            roleName = "Pest Control Technician";
+            roleName = "Pest Control";
+          } else if (dept.includes("logistics") || dept.includes("purchasing") || dept.includes("warehouse")) {
+            roleCode = "purchasing_officer";
+            roleName = "Logistics";
+          } else if (dept.includes("management") || dept.includes("executive") || dept.includes("admin")) {
+            roleCode = "super_admin";
+            roleName = "Super Admin";
           } else {
-            // Safe lowest privilege default
+            // Safe default
             roleCode = "sales_rep";
-            roleName = "Sales Representative";
+            roleName = "Sales";
           }
         }
 

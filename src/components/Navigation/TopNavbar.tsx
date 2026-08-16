@@ -17,10 +17,12 @@ import {
   FileText,
   Menu,
   X,
-  UserCheck
+  UserCheck,
+  LogOut
 } from "lucide-react";
 import { useUserRole, RoleCode } from "@/lib/auth/useUserRole";
 import { TopStatusProgress } from "@/components/Navigation/TopStatusProgress";
+import { createClient } from "@/lib/supabase/client";
 
 interface NavItem {
   name: string;
@@ -33,7 +35,6 @@ const mainDepartmentNav: NavItem[] = [
   { name: "Home", href: "/", icon: LayoutDashboard },
   { name: "Sales", href: "/sales", icon: ShoppingCart, allowedRoles: ["super_admin", "sales_rep"] },
   { name: "Finance", href: "/finance", icon: DollarSign, allowedRoles: ["super_admin", "finance_manager"] },
-  { name: "Marketing", href: "/products", icon: Target, allowedRoles: ["super_admin", "sales_rep", "purchasing_officer"] },
   { name: "Production", href: "/recipes", icon: Factory, allowedRoles: ["super_admin", "production_manager", "production_lead"] },
   { name: "Logistics", href: "/inventory", icon: Truck, allowedRoles: ["super_admin", "production_manager", "production_lead", "purchasing_officer", "logistics_driver"] },
 ];
@@ -56,6 +57,17 @@ export function TopNavbar() {
     setMounted(true);
   }, []);
 
+  const handleSignOut = async () => {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error("Error signing out:", e);
+    }
+    router.push("/login");
+    router.refresh();
+  };
+
   const isAllowed = (item: NavItem) => {
     if (!item.allowedRoles) return true;
     if (role === "super_admin") return true;
@@ -67,7 +79,7 @@ export function TopNavbar() {
 
   return (
     <header className="sticky top-0 left-0 right-0 z-40 shadow-md font-sans">
-      {/* TIER 1: TOP CENTER STATUS BAR CONTAINER (MATCHING MOCKUP DESIGN) */}
+      {/* TIER 1: TOP CENTER STATUS BAR CONTAINER */}
       <div className="bg-[#060b17] border-b border-amber-400/40 py-1.5 px-3 flex items-center justify-center relative">
         <TopStatusProgress />
       </div>
@@ -110,15 +122,24 @@ export function TopNavbar() {
             })}
           </nav>
 
-          {/* AUTHENTIC USER ROLE BADGE (READ-ONLY RBAC ENFORCED) & HAMBURGER TOGGLE */}
+          {/* USER DEPARTMENT BADGE & CONTROLS */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <div
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl bg-blue-50 border border-blue-200 text-xs font-extrabold text-blue-900 shadow-2xs"
-              title={`Verified Assigned Role: ${roleName}`}
+              title={`Verified Department / Role: ${roleName}`}
             >
               <UserCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-700 shrink-0" />
               <span className="truncate max-w-[110px] sm:max-w-none">{roleName}</span>
             </div>
+
+            <button
+              onClick={handleSignOut}
+              className="hidden lg:flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-700 font-extrabold text-xs transition-all active:scale-95 cursor-pointer"
+              title="Sign out of ERP session"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
 
             <button
               onClick={() => setIsDrawerOpen(!isDrawerOpen)}
@@ -174,7 +195,7 @@ export function TopNavbar() {
             <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-slate-50">
               {/* MOBILE-ONLY MAIN DEPARTMENTS GRID */}
               <div className="block md:hidden space-y-2">
-                <span className="text-[11px] font-black text-blue-900 uppercase tracking-wider block px-1">Main Departments</span>
+                <span className="text-[11px] font-black text-blue-900 uppercase tracking-wider block px-1">Departments</span>
                 <div className="grid grid-cols-2 gap-2">
                   {visibleMainNav.map((dept) => {
                     const Icon = dept.icon;
@@ -203,8 +224,8 @@ export function TopNavbar() {
               {/* SECONDARY SYSTEM MODULES */}
               <div className="space-y-2">
                 <span className="text-[11px] font-black text-blue-900 uppercase tracking-wider block px-1">
-                  <span className="hidden md:inline">Authorized System Modules</span>
-                  <span className="inline md:hidden">System Modules & Vault</span>
+                  <span className="hidden md:inline">Authorized Modules</span>
+                  <span className="inline md:hidden">Modules & Vault</span>
                 </span>
                 <div className="space-y-1.5">
                   {visibleSecondaryNav.map((item) => {
@@ -232,9 +253,18 @@ export function TopNavbar() {
               </div>
             </div>
 
-            {/* Drawer Footer */}
-            <div className="p-3 bg-white border-t border-slate-200 text-center shrink-0">
-              <span className="text-[10px] text-slate-500 font-bold">JRC Industrial Sales ERP</span>
+            {/* Drawer Footer with Sign Out */}
+            <div className="p-3 bg-white border-t border-slate-200 space-y-2 shrink-0">
+              <button
+                onClick={handleSignOut}
+                className="w-full py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-extrabold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out of Session</span>
+              </button>
+              <div className="text-center">
+                <span className="text-[10px] text-slate-400 font-semibold">JRC Industrial Sales ERP Operating System</span>
+              </div>
             </div>
           </div>
         </div>,

@@ -7,6 +7,11 @@ import { createClient } from "@/lib/supabase/client";
 const LOCAL_STORAGE_UNIFIED_KEY = "jrc_unified_orders_v5";
 const LOCAL_STORAGE_DELETED_KEY = "jrc_deleted_order_ids_v2";
 
+const isUUID = (str?: string): boolean => {
+  if (!str) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+};
+
 const getDeletedOrderIds = (): string[] => {
   try {
     const stored = localStorage.getItem(LOCAL_STORAGE_DELETED_KEY);
@@ -60,7 +65,7 @@ export function useUnifiedOrders() {
       const supabase = createClient();
       const { data: dbOrders } = await supabase
         .from("sales_orders")
-        .select("*, customers(company_name, shipping_address, payment_terms)")
+        .select("*, customers(company_name, shipping_address, payment_terms), sales_order_items(*, products(sku, name, uom, selling_price))")
         .order("created_at", { ascending: false });
 
       if (dbOrders) {
@@ -70,7 +75,29 @@ export function useUnifiedOrders() {
 
         const remoteMapped: UnifiedOrder[] = validDbOrders.map((so: any) => {
           const matchedLocal = currentOrders.find((o) => o.order_number === so.order_number || o.id === so.id);
-          if (matchedLocal) return matchedLocal;
+          
+          const loadedItems = so.sales_order_items && so.sales_order_items.length > 0
+            ? so.sales_order_items.map((it: any) => ({
+                id: it.id,
+                product_sku: it.products?.sku || it.product_sku || "FG-CHEM-101",
+                product_name: it.products?.name || it.product_name || "Industrial Chemical Product",
+                qty: Number(it.quantity) || 1,
+                uom: it.products?.uom || it.uom || "L",
+                unit_price: Number(it.unit_price) || 0,
+                total_price: Number(it.total_price) || 0,
+              }))
+            : (matchedLocal?.items || []);
+
+          if (matchedLocal) {
+            return {
+              ...matchedLocal,
+              items: loadedItems.length > 0 ? loadedItems : matchedLocal.items,
+            };
+          }
+
+          const grandTotal = Number(so.total_amount) || 0;
+          const subtotal = grandTotal / 1.12;
+          const vat = grandTotal - subtotal;
 
           return {
             id: so.id,
@@ -82,15 +109,15 @@ export function useUnifiedOrders() {
               : so.customers?.shipping_address?.street || "Client Registered Site",
             po_date: so.created_at ? so.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
             payment_terms: so.customers?.payment_terms || "NET 30 Days",
-            prepared_by: "Sales Representative",
+            prepared_by: "Sales",
             current_status: (so.status === "COMPLETED" ? "Completed" : "Waiting for Production") as OrderStatus,
             current_department_responsible: (so.status === "COMPLETED" ? "Sales" : "Production") as Department,
             last_updated_by: "System",
             last_updated_time: "Just now",
-            items: [],
-            subtotal: Number(so.total_amount) || 0,
-            vat_amount: (Number(so.total_amount) || 0) * 0.12,
-            grand_total: (Number(so.total_amount) || 0) * 1.12,
+            items: loadedItems,
+            subtotal,
+            vat_amount: vat,
+            grand_total: grandTotal,
             timeline: [
               {
                 id: `t-${so.id}`,
@@ -247,12 +274,35 @@ export function useUnifiedOrders() {
 
     try {
       const supabase = createClient();
-      await supabase.from("sales_orders").insert({
-        order_number: orderNo,
-        status: "APPROVED",
-        payment_status: orderData.payment_terms?.startsWith("Cash") ? "PAID" : "UNPAID",
-        total_amount: orderData.grand_total || 0,
-      });
+      const { data: insertedSo } = await supabase
+        .from("sales_orders")
+        .insert({
+          order_number: orderNo,
+          status: "APPROVED",
+          payment_status: orderData.payment_terms?.startsWith("Cash") ? "PAID" : "UNPAID",
+          total_amount: orderData.grand_total || 0,
+        })
+        .select()
+        .single();
+
+      if (insertedSo?.id && orderData.items && orderData.items.length > 0) {
+        // Look up or link products for line items
+        const { data: allProds } = await supabase.from("products").select("id, sku");
+        const prodMap = new Map<string, string>();
+        if (allProds) allProds.forEach((p: any) => prodMap.set(p.sku, p.id));
+
+        const itemsToInsert = orderData.items.map((it) => ({
+          sales_order_id: insertedSo.id,
+          product_id: prodMap.get(it.product_sku) || allProds?.[0]?.id,
+          quantity: it.qty,
+          unit_price: it.unit_price,
+          total_price: it.total_price,
+        })).filter((it) => it.product_id);
+
+        if (itemsToInsert.length > 0) {
+          await supabase.from("sales_order_items").insert(itemsToInsert);
+        }
+      }
     } catch (err) {
       console.error("Error inserting to Supabase:", err);
     }
@@ -358,10 +408,14 @@ export function useUnifiedOrders() {
 
     try {
       const supabase = createClient();
-      await supabase
-        .from("sales_orders")
-        .delete()
-        .or(`id.eq.${orderId},order_number.eq.${orderId}`);
+      const deleteQuery = supabase.from("sales_orders").delete();
+      if (isUUID(orderId)) {
+        await deleteQuery.or(`id.eq.${orderId},order_number.eq.${orderId}`);
+      } else if (targetOrder && isUUID(targetOrder.id)) {
+        await deleteQuery.or(`id.eq.${targetOrder.id},order_number.eq.${targetOrder.order_number}`);
+      } else {
+        await deleteQuery.eq("order_number", targetOrder?.order_number || orderId);
+      }
     } catch (err) {
       console.error("Error deleting order from Supabase:", err);
     }
@@ -396,13 +450,19 @@ export function useUnifiedOrders() {
 
     try {
       const supabase = createClient();
-      await supabase
-        .from("sales_orders")
-        .update({
-          total_amount: updatedFields.grand_total,
-          status: updatedFields.current_status === "Completed" ? "COMPLETED" : "APPROVED",
-        })
-        .or(`id.eq.${orderId},order_number.eq.${orderId}`);
+      const targetOrder = orders.find((o) => o.id === orderId || o.order_number === orderId);
+      const updateQuery = supabase.from("sales_orders").update({
+        total_amount: updatedFields.grand_total,
+        status: updatedFields.current_status === "Completed" ? "COMPLETED" : "APPROVED",
+      });
+
+      if (isUUID(orderId)) {
+        await updateQuery.or(`id.eq.${orderId},order_number.eq.${orderId}`);
+      } else if (targetOrder && isUUID(targetOrder.id)) {
+        await updateQuery.or(`id.eq.${targetOrder.id},order_number.eq.${targetOrder.order_number}`);
+      } else {
+        await updateQuery.eq("order_number", targetOrder?.order_number || orderId);
+      }
     } catch (err) {
       console.error("Error updating order in Supabase:", err);
     }

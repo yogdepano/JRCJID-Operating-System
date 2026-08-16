@@ -274,7 +274,7 @@ export default function ProductsPage() {
 
     try {
       const supabase = createClient();
-      await supabase.from("products").insert({
+      await supabase.from("products").upsert({
         sku: newProd.sku,
         name: newProd.name,
         category: newProd.category,
@@ -283,7 +283,7 @@ export default function ProductsPage() {
         selling_price: 0,
         supplier_name: newProd.supplier_name,
         supplier_price: newProd.supplier_price,
-      });
+      }, { onConflict: "sku" });
     } catch (err) {
       console.error("Supabase insert error:", err);
     }
@@ -346,7 +346,7 @@ export default function ProductsPage() {
 
     try {
       const supabase = createClient();
-      await supabase.from("products").insert({
+      await supabase.from("products").upsert({
         sku: newProd.sku,
         name: newProd.name,
         category: newProd.category,
@@ -355,7 +355,7 @@ export default function ProductsPage() {
         selling_price: newProd.selling_price,
         supplier_name: newProd.supplier_name,
         supplier_price: newProd.supplier_price,
-      });
+      }, { onConflict: "sku" });
     } catch (err) {
       console.error("Supabase insert error:", err);
     }

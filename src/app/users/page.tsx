@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { ShieldCheck, Plus, Search, UserCheck, Trash2, Edit3, UserPlus, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { createClient as createAnonClient } from "@supabase/supabase-js";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
 import { RoleGuard } from "@/components/Auth/RoleGuard";
 
@@ -17,12 +18,12 @@ export interface SystemUser {
 }
 
 const ROLE_OPTIONS = [
-  { code: "super_admin", name: "Super Administrator" },
-  { code: "production_manager", name: "Production Manager" },
-  { code: "sales_rep", name: "Sales Representative" },
-  { code: "purchasing_officer", name: "Purchasing Officer" },
-  { code: "pest_control_tech", name: "Pest Control Tech" },
-  { code: "finance_manager", name: "Finance Manager" },
+  { code: "super_admin", name: "Super Admin" },
+  { code: "production_manager", name: "Production" },
+  { code: "sales_rep", name: "Sales" },
+  { code: "purchasing_officer", name: "Logistics" },
+  { code: "pest_control_tech", name: "Pest Control" },
+  { code: "finance_manager", name: "Finance" },
 ];
 
 export default function UsersPage() {
@@ -81,11 +82,12 @@ export default function UsersPage() {
           .filter((p: any) => !deletedIds.includes(p.id) && !deletedIds.includes(p.email))
           .map((p: any) => {
             const assigned = userRoleAssignments.get(p.id);
+            const matchedOption = ROLE_OPTIONS.find((ro) => ro.code === assigned?.code);
             return {
               id: p.id,
               email: p.email,
               role: (assigned?.code as SystemUser["role"]) || "sales_rep",
-              role_name: assigned?.name || "Sales Representative",
+              role_name: matchedOption?.name || assigned?.name || "Sales",
               full_name: `${p.first_name || "Employee"} ${p.last_name || ""}`.trim(),
               department: p.department || "General Operations",
               status: p.is_active ? "ACTIVE" : "INACTIVE",
@@ -112,7 +114,6 @@ export default function UsersPage() {
     e.preventDefault();
 
     try {
-      const supabase = createClient();
       const names = fullName.trim().split(" ");
       const firstName = names[0] || fullName;
       const lastName = names.slice(1).join(" ") || "Employee";
@@ -127,24 +128,39 @@ export default function UsersPage() {
         }
       } catch (e) {}
 
-      // 1. Create account in Supabase Auth so auth.users record exists with real credentials
-      const { data: authData, error: authErr } = await supabase.auth.signUp({
-        email,
-        password: password || "JrcOS2026!",
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-            department,
+      // 1. Create account using isolated non-persistent client to prevent hijacking the admin's active session
+      let targetUserId: string | undefined;
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dummy.supabase.co";
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy";
+
+      try {
+        const isolatedClient = createAnonClient(supabaseUrl, supabaseAnonKey, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
           },
-        },
-      });
+        });
 
-      let targetUserId = authData?.user?.id;
+        const { data: authData } = await isolatedClient.auth.signUp({
+          email,
+          password: password || "JrcOS2026!",
+          options: {
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+              department,
+            },
+          },
+        });
+        targetUserId = authData?.user?.id;
+      } catch (e) {
+        console.warn("Isolated auth registration attempt:", e);
+      }
 
-      // 2. Fallback to direct profiles insert if auth account was already generated or created via admin
+      // 2. Direct profiles insert via authenticated client
+      const supabase = createClient();
       if (!targetUserId) {
-        const { data: newProfile, error: profileErr } = await supabase
+        const { data: newProfile } = await supabase
           .from("profiles")
           .upsert({
             email,
@@ -177,7 +193,7 @@ export default function UsersPage() {
         }
       }
 
-      alert(`Employee Account Authorization Created!\n\nEmail: ${email}\nInitial Password: ${password || "JrcOS2026!"}`);
+      alert(`Department Account Authorization Created!\n\nEmail: ${email}\nInitial Password: ${password || "JrcOS2026!"}`);
 
       setIsModalOpen(false);
       setFullName("");
