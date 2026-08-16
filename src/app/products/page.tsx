@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { TopNavbar } from "@/components/Navigation/TopNavbar";
 import { OrderTaskView } from "@/components/Orders/OrderTaskView";
 
+import { ProductFormulaEditor, ProductFormData, SizeFormula, FormulaIngredientItem } from "@/components/Products/ProductFormulaEditor";
+
 interface Product {
   id: string;
   sku: string;
@@ -20,13 +22,7 @@ interface Product {
   selling_price: number;
   supplier_name?: string;
   supplier_price?: number;
-}
-
-interface FormulaIngredientItem {
-  raw_material_sku: string;
-  name: string;
-  ratio_qty: number;
-  uom: string;
+  size_formulas?: Record<string, SizeFormula>;
 }
 
 const LOCAL_STORAGE_KEY = "jrc_product_catalog_cache_v1";
@@ -56,51 +52,9 @@ export default function ProductsPage() {
   const [supplierUnitPrice, setSupplierUnitPrice] = useState<number>(0);
   const [supplierUom, setSupplierUom] = useState("KG");
 
-  // FINISHED SALES PRODUCT FORM STATE
-  const [salesProdSku, setSalesProdSku] = useState("");
-  const [salesProdName, setSalesProdName] = useState("");
-  const [salesProdVariant, setSalesProdVariant] = useState("Standard / Unscented");
-  const [salesSellingPrice, setSalesSellingPrice] = useState<number>(0);
-  const [salesUnitCost, setSalesUnitCost] = useState<number>(0);
-  const [salesUom, setSalesUom] = useState("Drum (200L)");
-  const [salesIngredients, setSalesIngredients] = useState<FormulaIngredientItem[]>([]);
-
   const rawMaterialsList = products.filter(
     (p) => p.category === "raw_material" || p.category === "packaging"
   );
-
-  const handleAddSalesIngredient = () => {
-    const firstRm = rawMaterialsList[0] || products[0];
-    const defaultSku = firstRm?.sku || "RM-001";
-    const defaultName = firstRm?.name || "Supplier Raw Material";
-    setSalesIngredients([
-      ...salesIngredients,
-      { raw_material_sku: defaultSku, name: defaultName, ratio_qty: 10, uom: "KG" },
-    ]);
-  };
-
-  const handleRemoveSalesIngredient = (index: number) => {
-    setSalesIngredients(salesIngredients.filter((_, i) => i !== index));
-  };
-
-  const handleUpdateSalesIngredient = (index: number, field: keyof FormulaIngredientItem, value: any) => {
-    setSalesIngredients(
-      salesIngredients.map((ing, i) => {
-        if (i === index) {
-          const updated = { ...ing, [field]: value };
-          if (field === "raw_material_sku") {
-            const p = products.find((item) => item.sku === value);
-            if (p) {
-              updated.name = p.name;
-              updated.uom = p.uom || "KG";
-            }
-          }
-          return updated;
-        }
-        return ing;
-      })
-    );
-  };
 
   const fetchProducts = async () => {
     let cachedList: Product[] = [];
@@ -294,27 +248,39 @@ export default function ProductsPage() {
     setSupplierUnitPrice(0);
   };
 
-  const handleSaveSalesProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const finalSku = salesProdSku || generateSkuFromName(salesProdName, "finished_chemical", salesProdVariant) || `FG-${Date.now()}`;
-    const fullName = salesProdVariant && salesProdVariant !== "Standard / Unscented" ? `${salesProdName} (${salesProdVariant})` : salesProdName;
+  const handleSaveProductFormula = async (formData: ProductFormData) => {
+    const primaryFormula = formData.size_formulas[formData.active_size] || Object.values(formData.size_formulas)[0];
+    const primaryPrice = primaryFormula?.retail_price || 0;
+    const primaryUom = formData.active_size;
+
+    const categoryMap: Record<string, Product["category"]> = {
+      "Finished Product": "finished_chemical",
+      "Raw Material": "raw_material",
+      "Packaging": "packaging",
+      "Pest Control Supply": "pest_control_supply",
+    };
+    const category = categoryMap[formData.product_class] || "finished_chemical";
 
     const newProd: Product = {
-      id: `p-${Date.now()}`,
-      sku: finalSku,
-      name: fullName,
-      variant_scent: salesProdVariant || "Standard",
-      category: "finished_chemical",
-      uom: salesUom,
+      id: formData.id || `p-${Date.now()}`,
+      sku: formData.code,
+      name: formData.final_product_name,
+      variant_scent: formData.product_type,
+      category,
+      uom: primaryUom,
       min_reorder_level: 10,
       current_stock: 0,
-      unit_cost: salesUnitCost,
-      selling_price: salesSellingPrice,
+      unit_cost: 0,
+      selling_price: primaryPrice,
       supplier_name: "JRC In-House Production",
-      supplier_price: salesUnitCost,
+      supplier_price: 0,
+      size_formulas: formData.size_formulas,
     };
 
-    const updated = [newProd, ...products];
+    const updated = products.some((p) => p.sku === newProd.sku)
+      ? products.map((p) => (p.sku === newProd.sku ? { ...p, ...newProd } : p))
+      : [newProd, ...products];
+
     setProducts(updated);
 
     try {
@@ -323,26 +289,35 @@ export default function ProductsPage() {
       console.error("Local storage save error:", err);
     }
 
-    // Also save corresponding chemical BoM recipe if ingredients added
-    if (salesIngredients.length > 0) {
-      const newRecipe = {
-        id: `bom-${Date.now()}`,
-        finished_product_sku: finalSku,
-        finished_product_name: fullName,
-        batch_yield_qty: 1,
-        batch_yield_uom: salesUom,
-        version: "v1.0",
-        ingredients: salesIngredients,
-      };
+    // Also persist BoM recipes for each defined production size formula
+    try {
+      const storedRecs = localStorage.getItem(LOCAL_STORAGE_RECIPES_KEY);
+      let parsedRecs = storedRecs ? JSON.parse(storedRecs) : [];
 
-      try {
-        const storedRecs = localStorage.getItem(LOCAL_STORAGE_RECIPES_KEY);
-        const parsedRecs = storedRecs ? JSON.parse(storedRecs) : [];
-        localStorage.setItem(LOCAL_STORAGE_RECIPES_KEY, JSON.stringify([newRecipe, ...parsedRecs]));
-      } catch (err) {}
-    }
+      Object.entries(formData.size_formulas).forEach(([sizeKey, sizeForm]) => {
+        const recId = `bom-${formData.code}-${sizeKey.replace(/[\s()]/g, "_")}`;
+        const recObj = {
+          id: recId,
+          finished_product_sku: formData.code,
+          finished_product_name: `${formData.final_product_name} (${sizeKey})`,
+          batch_yield_qty: 1,
+          batch_yield_uom: sizeKey,
+          version: "v1.0",
+          ingredients: sizeForm.ingredients,
+          retail_price: sizeForm.retail_price,
+        };
+        parsedRecs = parsedRecs.filter(
+          (r: any) => r.id !== recId && r.finished_product_name !== recObj.finished_product_name
+        );
+        parsedRecs.unshift(recObj);
+      });
+
+      localStorage.setItem(LOCAL_STORAGE_RECIPES_KEY, JSON.stringify(parsedRecs));
+    } catch (err) {}
 
     setIsSalesProdModalOpen(false);
+    setIsEditModalOpen(false);
+    setEditingProduct(null);
 
     try {
       const supabase = createClient();
@@ -359,12 +334,6 @@ export default function ProductsPage() {
     } catch (err) {
       console.error("Supabase insert error:", err);
     }
-
-    setSalesProdSku("");
-    setSalesProdName("");
-    setSalesSellingPrice(0);
-    setSalesUnitCost(0);
-    setSalesIngredients([]);
   };
 
   const filteredProducts = products.filter((p) => {
@@ -375,6 +344,30 @@ export default function ProductsPage() {
     const matchesCategory = selectedCategory === "ALL" || p.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  const getInitialEditData = (prod: Product): Partial<ProductFormData> => {
+    const parts = prod.name.split(" - ");
+    const code = prod.sku;
+    const productName = parts.length >= 2 ? parts[1] : prod.name;
+    const productType = parts.length >= 3 ? parts[2] : (prod.variant_scent || "Wood Preservative");
+
+    return {
+      id: prod.id,
+      code: code,
+      product_name: productName,
+      product_type: productType,
+      product_class: prod.category === "finished_chemical" ? "Finished Product" : "Raw Material",
+      final_product_name: prod.name,
+      active_size: prod.uom || "1 DRUM",
+      size_formulas: prod.size_formulas || {
+        [prod.uom || "1 DRUM"]: {
+          production_size: prod.uom || "1 DRUM",
+          retail_price: prod.selling_price || 0,
+          ingredients: [],
+        },
+      },
+    };
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
@@ -689,298 +682,143 @@ export default function ProductsPage() {
 
         {/* MODAL 2: ADD FINISHED PRODUCT FOR SALE & EMBEDDED FORMULA */}
         {isSalesProdModalOpen && (
-          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-            <div className="bg-white border-2 border-blue-600 rounded-2xl w-full max-w-2xl p-5 sm:p-6 space-y-4 shadow-2xl my-auto">
+          <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+            <div className="bg-white border-2 border-blue-600 rounded-2xl w-full max-w-4xl p-4 sm:p-6 space-y-4 shadow-2xl my-auto">
               <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
-                <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                  <ShoppingBag className="w-5 h-5 text-blue-700" />
-                  <span>Log Finished Product & Formula</span>
-                </h3>
-                <button onClick={() => setIsSalesProdModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-lg font-bold">✕</button>
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-blue-50 border border-blue-200">
+                    <ShoppingBag className="w-5 h-5 text-blue-700" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                      Finished Product Entry & Multi-Size Formula
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-semibold">
+                      Configure product code, name, type, and size-specific chemical formulas (Drum, Pail, Liter)
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsSalesProdModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-900 text-lg font-bold p-1"
+                >
+                  ✕
+                </button>
               </div>
 
-              <form onSubmit={handleSaveSalesProduct} className="space-y-4 text-xs sm:text-sm">
-                <div>
-                  <label className="text-slate-800 font-extrabold block mb-1">Product Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Heavy Duty Industrial Degreaser"
-                    value={salesProdName}
-                    onChange={(e) => {
-                      setSalesProdName(e.target.value);
-                      if (!salesProdSku) {
-                        setSalesProdSku(generateSkuFromName(e.target.value, "finished_chemical", salesProdVariant));
-                      }
-                    }}
-                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-bold focus:border-blue-600 focus:outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Variant / Scent</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Lemon Fresh, Standard"
-                      value={salesProdVariant}
-                      onChange={(e) => {
-                        setSalesProdVariant(e.target.value);
-                        setSalesProdSku(generateSkuFromName(salesProdName, "finished_chemical", e.target.value));
-                      }}
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs text-slate-900 font-semibold focus:border-blue-600 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-slate-800 font-extrabold block">SKU Code</label>
-                      <button
-                        type="button"
-                        onClick={() => setSalesProdSku(generateSkuFromName(salesProdName, "finished_chemical", salesProdVariant))}
-                        className="text-[10px] text-blue-700 hover:underline font-extrabold flex items-center gap-1"
-                      >
-                        <Wand2 className="w-3 h-3" /> Auto
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      placeholder="FG-DEGR-500"
-                      value={salesProdSku}
-                      onChange={(e) => setSalesProdSku(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-blue-700 focus:border-blue-600 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Unit</label>
-                    <select
-                      value={salesUom}
-                      onChange={(e) => setSalesUom(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:border-blue-600 focus:outline-none"
-                    >
-                      <option value="Drum (200L)">Drum (200L)</option>
-                      <option value="Pail (20L)">Pail (20L)</option>
-                      <option value="Gallon (4L)">Gallon (4L)</option>
-                      <option value="Bottle (1L)">Bottle (1L)</option>
-                      <option value="L (Liters)">L (Liters)</option>
-                      <option value="KG (Kilograms)">KG (Kilograms)</option>
-                      <option value="PCS">PCS</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Selling Price (₱)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      placeholder="25000.00"
-                      value={salesSellingPrice || ""}
-                      onChange={(e) => setSalesSellingPrice(Number(e.target.value))}
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-blue-700 focus:border-blue-600 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* FORMULA SECTION */}
-                <div className="border-t-2 border-b-2 border-slate-100 py-3 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-extrabold text-blue-700 uppercase tracking-wider block">
-                        Formula (Bill of Materials)
-                      </span>
-                      <span className="text-[11px] text-slate-500 font-medium">Select ingredients from Supplier Raw Materials</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleAddSalesIngredient}
-                      className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 border border-amber-500 text-slate-950 font-extrabold text-xs shadow-xs active:scale-95 transition-all"
-                    >
-                      + Add Ingredient
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {salesIngredients.map((ing, idx) => (
-                      <div key={idx} className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200">
-                        <div className="flex-1">
-                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Ingredient #{idx + 1} (Supplier Raw Material)</label>
-                          <select
-                            value={ing.raw_material_sku}
-                            onChange={(e) => handleUpdateSalesIngredient(idx, "raw_material_sku", e.target.value)}
-                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900"
-                          >
-                            {rawMaterialsList.length > 0 ? (
-                              rawMaterialsList.map((p) => (
-                                <option key={p.sku} value={p.sku}>
-                                  {p.name} ({p.sku})
-                                </option>
-                              ))
-                            ) : (
-                              <option value="RM-001">Supplier Raw Material (RM-001)</option>
-                            )}
-                          </select>
-                        </div>
-
-                        <div className="w-24">
-                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Qty / Volume</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            required
-                            value={ing.ratio_qty}
-                            onChange={(e) => handleUpdateSalesIngredient(idx, "ratio_qty", Number(e.target.value))}
-                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-right text-slate-900"
-                          />
-                        </div>
-
-                        <div className="w-24">
-                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Unit</label>
-                          <select
-                            value={ing.uom}
-                            onChange={(e) => handleUpdateSalesIngredient(idx, "uom", e.target.value)}
-                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900"
-                          >
-                            <option value="Liters">Liters</option>
-                            <option value="KG">KG</option>
-                            <option value="Grams">Grams</option>
-                            <option value="mL">mL</option>
-                            <option value="PCS">PCS</option>
-                          </select>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSalesIngredient(idx)}
-                          className="p-1.5 text-rose-600 hover:text-rose-700 font-bold self-end"
-                          title="Remove ingredient"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-2 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsSalesProdModalOpen(false)}
-                    className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-extrabold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-600 text-white text-xs font-extrabold shadow-md active:scale-95 transition-all"
-                  >
-                    Save Finished Product
-                  </button>
-                </div>
-              </form>
+              <ProductFormulaEditor
+                availableRawMaterials={rawMaterialsList}
+                onSave={handleSaveProductFormula}
+                onCancel={() => setIsSalesProdModalOpen(false)}
+              />
             </div>
           </div>
         )}
 
         {/* MODAL 3: EDIT PRODUCT (EDITABLE BY FINANCE & SALES) */}
         {isEditModalOpen && editingProduct && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-            <div className="bg-white border-2 border-blue-600 rounded-2xl w-full max-w-lg p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+            <div className={`bg-white border-2 border-blue-600 rounded-2xl w-full ${editingProduct.category === "finished_chemical" ? "max-w-4xl" : "max-w-lg"} p-4 sm:p-6 space-y-4 shadow-2xl my-auto`}>
               <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
                   <Edit className="w-5 h-5 text-blue-700" />
-                  <span>Edit Product & Supplier Prices ({editingProduct.sku})</span>
+                  <span>Edit Product & Formula ({editingProduct.sku})</span>
                 </h3>
                 <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-lg font-bold">✕</button>
               </div>
 
-              <form onSubmit={handleSaveEditedProduct} className="space-y-4 text-xs sm:text-sm">
-                <div>
-                  <label className="text-slate-800 font-extrabold block mb-1">Product Description / Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={editingProduct.name}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                    className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-bold focus:border-blue-600"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+              {editingProduct.category === "finished_chemical" ? (
+                <ProductFormulaEditor
+                  initialData={getInitialEditData(editingProduct)}
+                  availableRawMaterials={rawMaterialsList}
+                  onSave={handleSaveProductFormula}
+                  onCancel={() => setIsEditModalOpen(false)}
+                />
+              ) : (
+                <form onSubmit={handleSaveEditedProduct} className="space-y-4 text-xs sm:text-sm">
                   <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Supplier Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Metro Chemical Supplies"
-                      value={editingProduct.supplier_name || ""}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, supplier_name: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs text-slate-900 font-semibold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">UOM</label>
+                    <label className="text-slate-800 font-extrabold block mb-1">Product Description / Name</label>
                     <input
                       type="text"
                       required
-                      value={editingProduct.uom}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, uom: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono text-slate-900 font-semibold"
+                      value={editingProduct.name}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-bold focus:border-blue-600"
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Current Supplier Price (₱)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={editingProduct.supplier_price || editingProduct.unit_cost}
-                      onChange={(e) =>
-                        setEditingProduct({
-                          ...editingProduct,
-                          supplier_price: Number(e.target.value),
-                          unit_cost: Number(e.target.value),
-                        })
-                      }
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-amber-700"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-slate-800 font-extrabold block mb-1">Full Selling Price (₱)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={editingProduct.selling_price}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, selling_price: Number(e.target.value) })}
-                      className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-blue-700"
-                    />
-                  </div>
-                </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-slate-800 font-extrabold block mb-1">Supplier Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Metro Chemical Supplies"
+                        value={editingProduct.supplier_name || ""}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, supplier_name: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs text-slate-900 font-semibold"
+                      />
+                    </div>
 
-                <div className="pt-2 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditModalOpen(false)}
-                    className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-extrabold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-600 text-white text-xs font-extrabold shadow-md ring-2 ring-amber-400"
-                  >
-                    Save Supplier & Price Changes
-                  </button>
-                </div>
-              </form>
+                    <div>
+                      <label className="text-slate-800 font-extrabold block mb-1">UOM</label>
+                      <input
+                        type="text"
+                        required
+                        value={editingProduct.uom}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, uom: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono text-slate-900 font-semibold"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-slate-800 font-extrabold block mb-1">Current Supplier Price (₱)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        value={editingProduct.supplier_price || editingProduct.unit_cost}
+                        onChange={(e) =>
+                          setEditingProduct({
+                            ...editingProduct,
+                            supplier_price: Number(e.target.value),
+                            unit_cost: Number(e.target.value),
+                          })
+                        }
+                        className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-amber-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-slate-800 font-extrabold block mb-1">Full Selling Price (₱)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        value={editingProduct.selling_price}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, selling_price: Number(e.target.value) })}
+                        className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-mono font-extrabold text-blue-700"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditModalOpen(false)}
+                      className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-extrabold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-600 text-white text-xs font-extrabold shadow-md ring-2 ring-amber-400"
+                    >
+                      Save Supplier & Price Changes
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         )}
